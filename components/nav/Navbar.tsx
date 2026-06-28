@@ -16,7 +16,7 @@ export default function Navbar() {
   const scrollY = useScrollY();
   const { toggle, isDark } = useTheme();
 
-  const isHome = pathname === "/";
+  const isHome = pathname === "/" || pathname === "";
   const active = useActiveSection(
     isHome ? ["hero", "about", "hobbies-preview", "events-preview", "contact"] : []
   );
@@ -53,7 +53,6 @@ export default function Navbar() {
     const item = NAV_ITEMS.find((n) => n.id === id);
 
     if (!item || item.type === "scroll") {
-      // Scroll targets stay on home
       if (!isHome) {
         router.push("/#" + (id || ""));
       } else if (id === "home") {
@@ -62,50 +61,46 @@ export default function Navbar() {
         document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
       }
     } else {
-      // Page targets navigate
       router.push("/" + id);
     }
   }
 
   return (
     <>
-      {/* Main nav bar */}
+      {/* ═══ Main nav bar — CSS transition, no Framer layout ═══ */}
       <nav className="fixed top-[14px] right-4 z-[100]">
-        <motion.div
-          layout
-          className={`
-            relative flex items-center overflow-hidden
-            bg-[var(--nav-bg)] backdrop-blur-2xl saturate-150
-            border border-[var(--nav-border)] rounded-pill
-            shadow-[0_2px_16px_var(--shadow)]
-            transition-[box-shadow] duration-300
-            ${collapsed
-              ? "w-[52px] h-[52px] cursor-pointer hover:shadow-[0_4px_24px_rgba(232,148,58,0.3)] hover:scale-[1.08]"
-              : "w-[calc(100vw-32px)] h-12 px-1.5 cursor-default"
-            }
-          `}
-          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+        <div
+          className="nav-bar"
+          style={{
+            width: collapsed ? 52 : "calc(100vw - 32px)",
+            height: collapsed ? 52 : 48,
+            padding: collapsed ? 0 : "0 6px",
+            cursor: collapsed ? "pointer" : "default",
+          }}
           onClick={() => { if (collapsed) setMenuOpen((m) => !m); }}
         >
-          {/* Orb icon (visible when collapsed) */}
-          <motion.span
-            className="absolute inset-0 flex items-center justify-center text-[var(--fg)]"
-            animate={{ opacity: collapsed ? 1 : 0 }}
-            transition={{ duration: 0.3, delay: collapsed ? 0.2 : 0 }}
+          {/* Orb icon — visible when collapsed */}
+          <span
+            className="absolute inset-0 flex items-center justify-center text-[var(--fg)] transition-opacity duration-300 pointer-events-none"
+            style={{
+              opacity: collapsed ? 1 : 0,
+              transitionDelay: collapsed ? "0.2s" : "0s",
+            }}
           >
             <Menu size={20} />
-          </motion.span>
+          </span>
 
-          {/* Desktop links (visible when expanded, hidden on mobile) */}
-          <motion.div
-            className="hidden sm:flex items-center w-full"
-            animate={{ opacity: collapsed ? 0 : 1 }}
-            transition={{ duration: 0.22 }}
-            style={{ pointerEvents: collapsed ? "none" : "auto" }}
+          {/* Desktop links — visible when expanded, hidden on mobile */}
+          <div
+            className="hidden sm:flex items-center w-full transition-opacity duration-200"
+            style={{
+              opacity: collapsed ? 0 : 1,
+              pointerEvents: collapsed ? "none" : "auto",
+            }}
           >
             <span
-              className="font-extrabold text-[15px] tracking-tight px-3.5 pl-4 text-[var(--fg)] cursor-pointer whitespace-nowrap"
-              onClick={() => navigate("home")}
+              className="font-extrabold text-[15px] tracking-tight px-3.5 pl-4 text-[var(--fg)] cursor-pointer whitespace-nowrap select-none"
+              onClick={(e) => { e.stopPropagation(); navigate("home"); }}
             >
               portfolio<span className="text-[var(--accent-1)]">.</span>
             </span>
@@ -120,13 +115,13 @@ export default function Navbar() {
                     key={n.id}
                     className={`
                       px-3.5 py-1.5 rounded-full text-[13px] font-medium
-                      whitespace-nowrap transition-all duration-200 outline-none border-none
+                      whitespace-nowrap transition-all duration-200 outline-none border-none font-[inherit]
                       ${isActive
                         ? "bg-[rgba(232,148,58,0.12)] text-[var(--accent-1)]"
                         : "bg-transparent text-[var(--fg-2)] hover:bg-[var(--border)] hover:text-[var(--fg)]"
                       }
                     `}
-                    onClick={() => navigate(n.id)}
+                    onClick={(e) => { e.stopPropagation(); navigate(n.id); }}
                   >
                     {n.label}
                   </button>
@@ -143,25 +138,27 @@ export default function Navbar() {
 
             <button
               className="w-[34px] h-[34px] rounded-full flex-shrink-0 bg-transparent border-none flex items-center justify-center cursor-pointer text-[var(--fg-2)] hover:bg-[var(--border)] hover:text-[var(--fg)] transition-all duration-200 outline-none mr-1.5"
-              onClick={toggle}
+              onClick={(e) => { e.stopPropagation(); toggle(); }}
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-          </motion.div>
+          </div>
 
-          {/* Mobile hamburger (visible on small screens when expanded) */}
-          <motion.button
-            className="sm:hidden absolute inset-0 flex items-center justify-center bg-transparent border-none text-[var(--fg)] cursor-pointer outline-none"
-            animate={{ opacity: collapsed ? 0 : 1 }}
-            style={{ pointerEvents: collapsed ? "none" : "auto" }}
-            onClick={() => setMenuOpen((m) => !m)}
+          {/* Mobile hamburger — visible on small screens when expanded */}
+          <button
+            className="sm:hidden absolute inset-0 flex items-center justify-center bg-transparent border-none text-[var(--fg)] cursor-pointer outline-none transition-opacity duration-200"
+            style={{
+              opacity: collapsed ? 0 : 1,
+              pointerEvents: collapsed ? "none" : "auto",
+            }}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((m) => !m); }}
           >
             <Menu size={20} />
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
       </nav>
 
-      {/* Floating theme toggle (visible when collapsed) */}
+      {/* ═══ Floating theme toggle (when collapsed) ═══ */}
       <AnimatePresence>
         {collapsed && (
           <motion.button
@@ -176,7 +173,7 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* Search dropdown */}
+      {/* ═══ Search dropdown ═══ */}
       <AnimatePresence>
         {searchOpen && !collapsed && (
           <>
@@ -206,7 +203,7 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* Menu overlay */}
+      {/* ═══ Menu overlay ═══ */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -271,6 +268,36 @@ export default function Navbar() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ═══ Nav bar styles ═══ */}
+      <style jsx global>{`
+        .nav-bar {
+          position: relative;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+          background: var(--nav-bg);
+          backdrop-filter: blur(24px) saturate(1.4);
+          -webkit-backdrop-filter: blur(24px) saturate(1.4);
+          border: 1px solid var(--nav-border);
+          border-radius: 50px;
+          box-shadow: 0 2px 16px var(--shadow);
+          transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                      height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                      padding 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 0.3s ease;
+        }
+        .nav-bar:hover {
+          ${/* Only apply hover glow when collapsed */""}
+        }
+        @media (max-width: 639px) {
+          .nav-bar {
+            width: 48px !important;
+            height: 48px !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

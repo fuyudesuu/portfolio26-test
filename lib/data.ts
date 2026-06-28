@@ -31,6 +31,7 @@ export type Hobby = {
   desc: string;
   long: string;
   accentIndex: 1 | 2 | 3;
+  image: string;
 };
 
 export const HOBBIES: Hobby[] = [
@@ -40,6 +41,7 @@ export const HOBBIES: Hobby[] = [
     desc: "Street & landscape photography across Southeast Asia",
     long: "I picked up a camera in 2019 during a solo trip through Vietnam and never put it down. These days I shoot mostly on a Fujifilm X-T5, chasing golden hour in alleyways and rice fields. My work leans toward moody street photography and wide landscape compositions.",
     accentIndex: 1,
+    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80",
   },
   {
     icon: Music,
@@ -47,6 +49,7 @@ export const HOBBIES: Hobby[] = [
     desc: "Lo-fi beats and ambient soundscapes in Ableton",
     long: "Music production started as a way to unwind after coding sessions. I work in Ableton Live, layering field recordings with soft synths and vinyl crackle. A few tracks have found their way onto lo-fi playlists.",
     accentIndex: 2,
+    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80",
   },
   {
     icon: Code2,
@@ -54,6 +57,7 @@ export const HOBBIES: Hobby[] = [
     desc: "Contributing to tools that make dev life better",
     long: "I contribute to several open-source projects focused on developer tooling and accessibility. Most recently I've been working on a Figma-to-code plugin and a CLI tool for scaffolding design systems.",
     accentIndex: 3,
+    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80",
   },
   {
     icon: Bike,
@@ -61,6 +65,7 @@ export const HOBBIES: Hobby[] = [
     desc: "Weekend century rides and bike-packing adventures",
     long: "Road cycling is my moving meditation. I ride a Canyon Endurace and do regular century rides around the Mekong Delta. Last year I completed a 5-day bike-packing trip from Saigon to Dalat through the Central Highlands.",
     accentIndex: 1,
+    image: "https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800&q=80",
   },
 ];
 
