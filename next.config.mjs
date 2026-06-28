@@ -5,8 +5,8 @@ const nextConfig = {
 
   // IMPORTANT: Replace 'portfolio-site' with your actual GitHub repo name.
   // If deploying to https://username.github.io (root), remove both lines below.
-  basePath: "/portfolio-site",
-  assetPrefix: "/portfolio-site",
+  basePath: "/portfolio26-test",
+  assetPrefix: "/portfolio26-test",
 
   // GitHub Pages doesn't support Next.js image optimization
   images: {
