@@ -36,7 +36,7 @@ export default function RootLayout({
       <body className="font-sans">
         <ThemeProvider>
           <Navbar />
-          <main>{children}</main>
+          <main className="pb-24 sm:pb-0">{children}</main>
         </ThemeProvider>
       </body>
     </html>
