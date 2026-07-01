@@ -3,7 +3,14 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 
-/* Floating shape config — each drifts at its own speed and direction */
+type HeroProps = {
+  profile: {
+    name: string;
+    eyebrow: string;
+    tagline: string;
+  };
+};
+
 const SHAPES = [
   { size: 180, x: "8%",  y: "15%", color: "var(--accent-1)", radius: "38%",  speed: 0.08, rotate: 12,  delay: 0 },
   { size: 120, x: "78%", y: "12%", color: "var(--accent-2)", radius: "30%",  speed: 0.12, rotate: -8,  delay: 1 },
@@ -13,12 +20,11 @@ const SHAPES = [
   { size: 50,  x: "60%", y: "80%", color: "var(--accent-1)", radius: "50%",  speed: 0.09, rotate: -25, delay: 0.8 },
 ];
 
-export default function Hero() {
+export default function Hero({ profile }: HeroProps) {
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 500], [1, 0]);
   const y = useTransform(scrollY, [0, 500], [0, 125]);
 
-  /* Individual parallax transforms for each shape (hooks must be top-level) */
   const s0y = useTransform(scrollY, [0, 600], [0, SHAPES[0].speed * 600]);
   const s0r = useTransform(scrollY, [0, 600], [SHAPES[0].rotate, SHAPES[0].rotate + 30]);
   const s1y = useTransform(scrollY, [0, 600], [0, SHAPES[1].speed * 600]);
@@ -38,119 +44,48 @@ export default function Hero() {
     { y: s4y, rotate: s4r }, { y: s5y, rotate: s5r },
   ];
 
+  const nameParts = profile.name.split(" ");
+
   return (
-    <section
-      id="hero"
-      className="min-h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden"
-    >
-      {/* ── Ambient glow ── */}
+    <section id="hero" className="min-h-screen flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,var(--accent-1)_0%,transparent_70%)] opacity-[0.07] pointer-events-none dark:opacity-[0.05]" />
 
-      {/* ── Floating shapes ── */}
       {SHAPES.map((s, i) => (
         <motion.div
           key={i}
           className="absolute pointer-events-none"
-          style={{
-            width: s.size,
-            height: s.size,
-            left: s.x,
-            top: s.y,
-            borderRadius: s.radius,
-            background: s.color,
-            opacity: 0.08,
-            y: shapeTransforms[i].y,
-            rotate: shapeTransforms[i].rotate,
-          }}
-          animate={{
-            x: [0, 12, -8, 0],
-            y: [0, -15, 10, 0],
-            scale: [1, 1.05, 0.97, 1],
-          }}
-          transition={{
-            duration: 8 + i * 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: s.delay,
-          }}
+          style={{ width: s.size, height: s.size, left: s.x, top: s.y, borderRadius: s.radius, background: s.color, opacity: 0.08, y: shapeTransforms[i].y, rotate: shapeTransforms[i].rotate }}
+          animate={{ x: [0, 12, -8, 0], y: [0, -15, 10, 0], scale: [1, 1.05, 0.97, 1] }}
+          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
         />
       ))}
 
-      {/* ── Accent dots (small decorative circles) ── */}
-      <motion.div
-        className="absolute w-3 h-3 rounded-full bg-[var(--accent-1)] opacity-20"
-        style={{ left: "20%", top: "25%" }}
-        animate={{ y: [0, -20, 0], opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute w-2 h-2 rounded-full bg-[var(--accent-2)] opacity-20"
-        style={{ right: "25%", top: "30%" }}
-        animate={{ y: [0, 15, 0], opacity: [0.15, 0.35, 0.15] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-      />
-      <motion.div
-        className="absolute w-2.5 h-2.5 rounded-full bg-[var(--accent-3)] opacity-15"
-        style={{ left: "65%", bottom: "25%" }}
-        animate={{ y: [0, -12, 0], x: [0, 8, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-      />
-
-      {/* ── Content ── */}
       <motion.div className="relative z-10" style={{ opacity, y }}>
-        <motion.p
-          className="text-[13px] font-semibold tracking-[0.12em] uppercase text-[var(--accent-1)] mb-5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          designer · developer · creator
+        <motion.p className="text-[13px] font-semibold tracking-[0.12em] uppercase text-[var(--accent-1)] mb-5"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
+          {profile.eyebrow}
         </motion.p>
-
-        <motion.h1
-          className="text-[clamp(52px,12vw,96px)] font-black tracking-[-0.05em] leading-[0.95] text-[var(--fg)] mb-5"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-        >
-          Alex<br />Nguyen
+        <motion.h1 className="text-[clamp(52px,12vw,96px)] font-black tracking-[-0.05em] leading-[0.95] text-[var(--fg)] mb-5"
+          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
+          {nameParts.map((part, i) => (<span key={i}>{part}{i < nameParts.length - 1 && <br />}</span>))}
         </motion.h1>
-
-        <motion.p
-          className="text-[clamp(16px,2.5vw,20px)] font-normal text-[var(--fg-2)] max-w-[440px] mx-auto mb-10 leading-relaxed"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          Crafting expressive digital experiences from Saigon
+        <motion.p className="text-[clamp(16px,2.5vw,20px)] font-normal text-[var(--fg-2)] max-w-[440px] mx-auto mb-10 leading-relaxed"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}>
+          {profile.tagline}
         </motion.p>
-
-        <motion.div
-          className="flex gap-3 justify-center flex-wrap"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-        >
-          <a
-            href="#about"
-            className="flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-[var(--accent-1)] text-white border-none shadow-[0_4px_16px_rgba(232,148,58,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(232,148,58,0.4)] transition-all duration-250 outline-none"
-          >
+        <motion.div className="flex gap-3 justify-center flex-wrap"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}>
+          <a href="#about" className="flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-[var(--accent-1)] text-white border-none shadow-[0_4px_16px_rgba(232,148,58,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(232,148,58,0.4)] transition-all duration-250 outline-none">
             Explore my work <ArrowUpRight size={16} />
           </a>
-          <a
-            href="#contact"
-            className="flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-transparent text-[var(--fg)] border-[1.5px] border-[var(--border)] hover:border-[var(--fg-3)] hover:-translate-y-0.5 transition-all duration-250 outline-none"
-          >
+          <a href="#contact" className="flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-transparent text-[var(--fg)] border-[1.5px] border-[var(--border)] hover:border-[var(--fg-3)] hover:-translate-y-0.5 transition-all duration-250 outline-none">
             Get in touch
           </a>
         </motion.div>
       </motion.div>
 
-      <motion.div
-        className="absolute bottom-10 text-[var(--fg-3)]"
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-      >
+      <motion.div className="absolute bottom-10 text-[var(--fg-3)]"
+        animate={{ y: [0, 8, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}>
         <ChevronDown size={22} />
       </motion.div>
     </section>

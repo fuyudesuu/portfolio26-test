@@ -1,17 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export for GitHub Pages
-  output: "export",
-
-  // IMPORTANT: Replace 'portfolio-site' with your actual GitHub repo name.
-  // If deploying to https://username.github.io (root), remove both lines below.
-  basePath: "/portfolio26-test",
-  assetPrefix: "/portfolio26-test",
-
-  // GitHub Pages doesn't support Next.js image optimization
-  images: {
-    unoptimized: true,
-  },
+  // No longer static export — Vercel handles server-side features
+  // To revert to GitHub Pages: add output: "export", basePath, assetPrefix, images.unoptimized
 };
 
 export default nextConfig;
