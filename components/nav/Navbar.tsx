@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sun, Moon } from "lucide-react";
+import { Search, Sun, Moon, CornerDownLeft } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/data";
 import { useActiveSection } from "@/lib/hooks";
 import { useTheme } from "@/lib/theme";
+import type { SearchEntry } from "@/lib/constants";
 
 /**
  * Map the home page's scroll sections to a nav item id, so the highlight
@@ -23,7 +24,7 @@ const SECTION_TO_NAV: Record<string, string> = {
 
 const HIGHLIGHT_SPRING = { type: "spring", stiffness: 380, damping: 32 } as const;
 
-export default function Navbar() {
+export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toggle, isDark } = useTheme();
@@ -34,15 +35,17 @@ export default function Navbar() {
   );
 
   // The currently highlighted nav id: derived from the scrolled section on
-  // home, or from the current route on sub-pages.
-  const activeNavId = isHome
+  // home, or from the current route on sub-pages. Falls back to the first nav
+  // item so the highlight is always mounted — otherwise it unmounts at the top
+  // of the page and animates in from a stale position on the next scroll.
+  let activeNavId = isHome
     ? SECTION_TO_NAV[active] ?? ""
     : pathname.replace(/^\//, "");
-
-  const activeItem = NAV_ITEMS.find((n) => n.id === activeNavId);
+  if (!activeNavId) activeNavId = NAV_ITEMS[0].id;
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
+  const [selected, setSelected] = useState(0);
 
   // Close search on route change
   useEffect(() => {
@@ -50,8 +53,31 @@ export default function Navbar() {
     setSearchQ("");
   }, [pathname]);
 
+  // Reset the highlighted result whenever the query or open state changes
+  useEffect(() => {
+    setSelected(0);
+  }, [searchQ, searchOpen]);
+
+  // ⌘K / Ctrl+K toggles search
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // The site navbar has no place in the admin area — that section renders its
+  // own header and tab bar. Bail out after hooks (React requires unconditional
+  // hook calls) so the component mounts but renders nothing on /admin/*.
+  if (pathname.startsWith("/admin")) return null;
+
   function navigate(id: string) {
     setSearchOpen(false);
+    setSearchQ("");
 
     const item = NAV_ITEMS.find((n) => n.id === id);
 
@@ -65,6 +91,28 @@ export default function Navbar() {
       }
     } else {
       router.push("/" + id);
+    }
+  }
+
+  // Search results: matches on non-empty query, otherwise a few section shortcuts
+  const q = searchQ.trim().toLowerCase();
+  const results = q
+    ? searchIndex.filter((e) => e.label.toLowerCase().includes(q)).slice(0, 8)
+    : searchIndex.filter((e) => e.category === "Section");
+
+  function onSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelected((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelected((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (results[selected]) navigate(results[selected].navId);
+    } else if (e.key === "Escape") {
+      setSearchOpen(false);
+      setSearchQ("");
     }
   }
 
@@ -112,7 +160,8 @@ export default function Navbar() {
 
           <button
             className="w-[34px] h-[34px] rounded-full flex-shrink-0 bg-transparent border-none flex items-center justify-center cursor-pointer text-[var(--fg-2)] hover:bg-[var(--border)] hover:text-[var(--fg)] transition-all duration-200 outline-none"
-            onClick={() => setSearchOpen((s) => !s)}
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
           >
             <Search size={15} />
           </button>
@@ -120,6 +169,7 @@ export default function Navbar() {
           <button
             className="w-[34px] h-[34px] rounded-full flex-shrink-0 bg-transparent border-none flex items-center justify-center cursor-pointer text-[var(--fg-2)] hover:bg-[var(--border)] hover:text-[var(--fg)] transition-all duration-200 outline-none mr-1.5"
             onClick={toggle}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -127,19 +177,17 @@ export default function Navbar() {
       </nav>
 
       {/* ═══════════ Mobile — floating bottom dock ═══════════ */}
-      <nav className="sm:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]">
+      <nav className="sm:hidden fixed bottom-4 left-0 right-0 mx-auto z-[100] w-fit max-w-[calc(100vw-12px)]">
         <div className="nav-dock">
           {NAV_ITEMS.map((n) => {
             const Icon = n.icon;
             const isActive = activeNavId === n.id;
             return (
-              <motion.button
+              <button
                 key={n.id}
-                layout
-                transition={HIGHLIGHT_SPRING}
                 onClick={() => navigate(n.id)}
                 className={`
-                  relative flex items-center justify-center rounded-full px-3 py-2.5
+                  relative flex items-center justify-center rounded-full px-2 py-2.5
                   bg-transparent border-none cursor-pointer outline-none font-[inherit]
                   ${isActive ? "text-[var(--accent-1)]" : "text-[var(--fg-2)]"}
                 `}
@@ -162,21 +210,29 @@ export default function Navbar() {
                         animate={{ width: "auto", opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
                         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden whitespace-nowrap text-[13px] font-semibold"
+                        className="overflow-hidden whitespace-nowrap text-[13px] font-semibold flex-shrink-0"
                       >
                         {n.label}
                       </motion.span>
                     )}
                   </AnimatePresence>
                 </span>
-              </motion.button>
+              </button>
             );
           })}
 
           <div className="w-px h-6 bg-[var(--border)] mx-0.5 flex-shrink-0" />
 
           <button
-            className="flex items-center justify-center w-[42px] h-[42px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
+            className="flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+          >
+            <Search size={18} />
+          </button>
+
+          <button
+            className="flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
             onClick={toggle}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
@@ -185,31 +241,80 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* ═══════════ Search dropdown (desktop) ═══════════ */}
+      {/* ═══════════ Search command palette (desktop + mobile) ═══════════ */}
       <AnimatePresence>
         {searchOpen && (
           <>
-            <div className="fixed inset-0 z-[98]" onClick={() => { setSearchOpen(false); setSearchQ(""); }} />
             <motion.div
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="hidden sm:flex fixed z-[101] top-[74px] right-4 w-[calc(100vw-32px)] max-w-[500px] bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl px-4 py-3 items-center gap-3 shadow-[0_8px_32px_var(--shadow)]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[105] bg-black/30 backdrop-blur-sm"
+              onClick={() => { setSearchOpen(false); setSearchQ(""); }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              role="dialog"
+              aria-modal="true"
+              /* Center via auto-margins, not translate-x: Framer sets an inline
+                 transform for the y/scale animation, which would override it. */
+              className="fixed z-[110] top-[12vh] left-0 right-0 mx-auto w-[calc(100vw-32px)] max-w-[520px] bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-[0_16px_48px_var(--shadow)]"
             >
-              <Search size={16} className="text-[var(--fg-3)] flex-shrink-0" />
-              <input
-                autoFocus
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Search sections, skills, events..."
-                className="flex-1 bg-transparent border-none outline-none text-[var(--fg)] text-sm font-[inherit] placeholder:text-[var(--fg-3)]"
-              />
-              {searchQ && (
-                <button className="bg-transparent border-none text-[var(--fg-3)] cursor-pointer text-xs outline-none" onClick={() => setSearchQ("")}>
-                  Clear
-                </button>
-              )}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
+                <Search size={17} className="text-[var(--fg-3)] flex-shrink-0" />
+                <input
+                  autoFocus
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  onKeyDown={onSearchKeyDown}
+                  placeholder="Search sections, skills, hobbies, events..."
+                  className="flex-1 bg-transparent border-none outline-none text-[var(--fg)] text-[15px] font-[inherit] placeholder:text-[var(--fg-3)]"
+                />
+                {searchQ && (
+                  <button
+                    className="bg-transparent border-none text-[var(--fg-3)] cursor-pointer text-xs outline-none hover:text-[var(--fg)]"
+                    onClick={() => setSearchQ("")}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[46vh] overflow-y-auto p-2">
+                {results.length === 0 ? (
+                  <p className="px-3 py-6 text-center text-sm text-[var(--fg-3)]">
+                    No results for &ldquo;{searchQ}&rdquo;
+                  </p>
+                ) : (
+                  results.map((r, i) => (
+                    <button
+                      key={`${r.category}-${r.label}-${i}`}
+                      onMouseEnter={() => setSelected(i)}
+                      onClick={() => navigate(r.navId)}
+                      className={`
+                        w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl
+                        text-left border-none cursor-pointer outline-none font-[inherit] transition-colors
+                        ${i === selected ? "bg-[var(--border)]" : "bg-transparent"}
+                      `}
+                    >
+                      <span className="text-[15px] font-medium text-[var(--fg)] truncate">
+                        {r.label}
+                      </span>
+                      <span className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--fg-3)]">
+                          {r.category}
+                        </span>
+                        {i === selected && (
+                          <CornerDownLeft size={13} className="text-[var(--fg-3)]" />
+                        )}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             </motion.div>
           </>
         )}

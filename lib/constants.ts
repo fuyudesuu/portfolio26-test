@@ -1,6 +1,16 @@
 /* ─── Types ─── */
 export type EventType = "speaker" | "organizer" | "attendee";
 
+/* ─── Navbar search ─── */
+export type SearchCategory = "Section" | "Skill" | "Hobby" | "Event";
+
+export type SearchEntry = {
+  label: string;
+  category: SearchCategory;
+  /** Nav id passed to the navbar's navigate(): a scroll target or a page route. */
+  navId: string;
+};
+
 /* ─── Accent colors (CSS variable references) ─── */
 export const ACCENT_COLORS: Record<number, string> = {
   1: "var(--accent-1)",
