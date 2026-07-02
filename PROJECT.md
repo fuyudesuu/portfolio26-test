@@ -78,8 +78,8 @@ Dark mode (toggled via .dark class on <html>):
 
 | Breakpoint | Behavior |
 |---|---|
-| `sm` (640px, Tailwind default) | Desktop navbar with text links, search button, theme toggle |
-| `< sm` (below 640px) | Navbar becomes hamburger circle, mobile dropdown menu |
+| `sm` (640px, Tailwind default) | Static top navbar with text links + sliding highlight, search button, theme toggle |
+| `< sm` (below 640px) | Navbar becomes a floating bottom dock (icons + active section label + theme toggle) |
 | `max-sm` (below 640px) | Hobbies grid goes single column, About grid goes single column |
 
 ---
@@ -121,16 +121,16 @@ Dark mode (toggled via .dark class on <html>):
 
 ## Navbar Behavior
 
-The navbar is the signature interaction of the site:
+The navbar is static (no bar→orb retraction) with an iOS-style sliding highlight that tracks scroll position:
 
-1. **Expanded state** — full-width glass bar anchored to `top: 14px; right: 16px`. Contains logo ("portfolio."), nav links, search button, and dark/light mode toggle. Uses Framer Motion `layout` for smooth morphing.
-2. **Retraction trigger** — scrolls past 55% of the hero height (on home) or 60px (on sub-pages).
-3. **Retraction animation** — CSS `width` transition (0.5s cubic-bezier) from `calc(100vw - 32px)` to `52px`. Inner text fades out (0.2s), orb icon fades in (0.3s with 0.2s delay). Right-anchored, so it visually shrinks from left to right. Uses CSS transitions (not Framer Motion `layout`) to avoid child element distortion.
-4. **Collapsed state** — 52px circle orb. Click opens dropdown menu with nav items + icons + "Back to top". On sub-pages, includes a "Home" button at top.
-5. **Auto-expand** — scrolling back into the hero auto-expands the bar.
-6. **Mobile** — below `sm` breakpoint, expanded bar is a 48px circle (hamburger). Same dropdown menu.
-7. **Floating theme toggle** — appears at `right: 80px` when collapsed, animated with `AnimatePresence`.
-8. **Routing** — About/Contact are scroll targets on home page. Hobbies/Events are Next.js page navigations. If on a sub-page and you click About, it navigates home then scrolls.
+1. **Desktop (≥ `sm`)** — static full-width glass bar anchored at `top: 14px; left/right: 16px`. Contains logo ("portfolio."), centered nav links, search button, and dark/light mode toggle.
+2. **Sliding highlight** — the active nav item shows a rounded pill highlight rendered via Framer Motion `layoutId="nav-highlight-desktop"`. As the user scrolls between sections the pill glides to the next item with a spring transition (iOS segmented-control feel), instead of instantly swapping.
+3. **Scroll → nav mapping** — on the home page, `SECTION_TO_NAV` maps scroll sections to nav items so the highlight moves through all four: `about`→About, `hobbies-preview`→Hobbies, `events-preview`→Events, `contact`→Contact (`hero` highlights nothing). On sub-pages the highlight follows the route.
+4. **Mobile (< `sm`)** — floating pill **dock fixed at the bottom center** of the screen. Icon-only buttons for each nav item; the active item expands to reveal its **section name** (width/opacity animation) as the user scrolls, so the current section is always labeled. Uses `layoutId="nav-highlight-mobile"` for the same sliding highlight.
+5. **Dark mode on mobile** — the bottom dock includes a sun/moon theme toggle (after a divider), so theming is reachable on phones (previously only on desktop).
+6. **Search** — desktop-only dropdown, opened from the search icon (`AnimatePresence` fade-from-top).
+7. **Routing** — About/Contact are scroll targets on the home page. Hobbies/Events are Next.js page navigations. If on a sub-page and you tap About, it navigates home then scrolls.
+8. **Content spacing** — `main` gets `pb-24 sm:pb-0` so the floating bottom dock never covers the last section on mobile.
 
 ---
 
