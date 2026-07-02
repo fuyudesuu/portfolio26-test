@@ -50,6 +50,11 @@ export default function Navbar() {
     setSearchQ("");
   }, [pathname]);
 
+  // The site navbar has no place in the admin area — that section renders its
+  // own header and tab bar. Bail out after hooks (React requires unconditional
+  // hook calls) so the component mounts but renders nothing on /admin/*.
+  if (pathname.startsWith("/admin")) return null;
+
   function navigate(id: string) {
     setSearchOpen(false);
 
