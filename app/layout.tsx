@@ -6,16 +6,21 @@ import { NAV_ITEMS } from "@/lib/data";
 import { getHobbies, getEvents, getAboutProfile } from "@/lib/content";
 import type { SearchEntry } from "@/lib/constants";
 
-export const metadata: Metadata = {
-  title: "Alex Nguyen — Designer & Developer",
-  description:
-    "Portfolio of Alex Nguyen. Crafting expressive digital experiences from Saigon.",
-  openGraph: {
-    title: "Alex Nguyen — Designer & Developer",
-    description: "Crafting expressive digital experiences from Saigon.",
-    type: "website",
-  },
-};
+// Derive metadata from the CMS profile so the tab title / link preview always
+// reflect the current name, instead of a hardcoded value.
+export function generateMetadata(): Metadata {
+  const profile = getAboutProfile();
+  const name = profile.name || "Portfolio";
+  const title = profile.title ? `${name} — ${profile.title}` : name;
+  const description =
+    profile.tagline || (profile.title ? `${name}, ${profile.title}.` : name);
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "website" },
+  };
+}
 
 export default function RootLayout({
   children,
