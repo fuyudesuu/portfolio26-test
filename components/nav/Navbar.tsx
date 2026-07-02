@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Sun, Moon, CornerDownLeft } from "lucide-react";
@@ -24,6 +24,97 @@ const SECTION_TO_NAV: Record<string, string> = {
 
 const HIGHLIGHT_SPRING = { type: "spring", stiffness: 380, damping: 32 } as const;
 
+// useLayoutEffect warns during SSR; fall back to useEffect on the server.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+type Box = { left: number; top: number; width: number; height: number; ready: boolean };
+const EMPTY_BOX: Box = { left: 0, top: 0, width: 0, height: 0, ready: false };
+
+/**
+ * A single persistent sliding-highlight indicator.
+ *
+ * Instead of mounting a Framer `layoutId` pill inside whichever button is
+ * active (which pops across Next.js route changes because the unmount/mount
+ * handshake is fragile), we keep one element mounted and animate it to the
+ * measured box of the active button. It can never "appear from nowhere" — it
+ * just springs from where it is to the new target.
+ *
+ * A short rAF loop re-measures for ~380ms after each change so the indicator
+ * also tracks layout that animates in (e.g. the mobile label reveal / reflow).
+ */
+function useSlidingIndicator(activeKey: string, dep: unknown) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const items = useRef<Record<string, HTMLElement | null>>({});
+  const refCbs = useRef<Record<string, (el: HTMLElement | null) => void>>({});
+  const [box, setBox] = useState<Box>(EMPTY_BOX);
+  const instant = useRef(true); // first placement should not animate in
+
+  function measureInto(key: string) {
+    const el = items.current[key];
+    if (!el || !containerRef.current) {
+      setBox((p) => (p.ready ? { ...p, ready: false } : p));
+      return;
+    }
+    const next: Box = {
+      left: el.offsetLeft,
+      top: el.offsetTop,
+      width: el.offsetWidth,
+      height: el.offsetHeight,
+      ready: true,
+    };
+    setBox((p) =>
+      p.ready && p.left === next.left && p.top === next.top && p.width === next.width && p.height === next.height
+        ? p
+        : next
+    );
+  }
+
+  useIsoLayoutEffect(() => {
+    let raf = 0;
+    let start = 0;
+    const tick = (ts: number) => {
+      measureInto(activeKey);
+      if (!start) start = ts;
+      if (ts - start < 380) raf = requestAnimationFrame(tick);
+      else instant.current = false;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey, dep]);
+
+  useEffect(() => {
+    const onResize = () => measureInto(activeKey);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey]);
+
+  function itemRef(key: string) {
+    if (!refCbs.current[key]) {
+      refCbs.current[key] = (el: HTMLElement | null) => {
+        items.current[key] = el;
+      };
+    }
+    return refCbs.current[key];
+  }
+
+  return { containerRef, itemRef, box, instant };
+}
+
+function Indicator({ box, instant, className }: { box: Box; instant: React.MutableRefObject<boolean>; className?: string }) {
+  return (
+    <motion.div
+      aria-hidden
+      className={`absolute rounded-full bg-[rgba(232,148,58,0.14)] pointer-events-none ${className ?? ""}`}
+      style={{ zIndex: 0 }}
+      initial={false}
+      animate={{ left: box.left, top: box.top, width: box.width, height: box.height, opacity: box.ready ? 1 : 0 }}
+      transition={instant.current ? { duration: 0 } : HIGHLIGHT_SPRING}
+    />
+  );
+}
+
 export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,12 +127,14 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
 
   // The currently highlighted nav id: derived from the scrolled section on
   // home, or from the current route on sub-pages. Falls back to the first nav
-  // item so the highlight is always mounted — otherwise it unmounts at the top
-  // of the page and animates in from a stale position on the next scroll.
+  // item so there is always exactly one highlighted item.
   let activeNavId = isHome
     ? SECTION_TO_NAV[active] ?? ""
     : pathname.replace(/^\//, "");
   if (!activeNavId) activeNavId = NAV_ITEMS[0].id;
+
+  const deskInd = useSlidingIndicator(activeNavId, pathname);
+  const mobInd = useSlidingIndicator(activeNavId, pathname);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
@@ -128,14 +221,16 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
             portfolio<span className="text-[var(--accent-1)]">.</span>
           </span>
 
-          <div className="flex-1 flex justify-center gap-1">
+          <div ref={deskInd.containerRef} className="relative flex-1 flex justify-center gap-1">
+            <Indicator box={deskInd.box} instant={deskInd.instant} />
             {NAV_ITEMS.map((n) => {
               const isActive = activeNavId === n.id;
               return (
                 <button
                   key={n.id}
+                  ref={deskInd.itemRef(n.id)}
                   className={`
-                    relative px-3.5 py-1.5 rounded-full text-[13px] font-medium
+                    relative z-10 px-3.5 py-1.5 rounded-full text-[13px] font-medium
                     whitespace-nowrap transition-colors duration-200 outline-none border-none
                     bg-transparent cursor-pointer font-[inherit]
                     ${isActive
@@ -145,14 +240,7 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
                   `}
                   onClick={() => navigate(n.id)}
                 >
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-highlight-desktop"
-                      className="absolute inset-0 rounded-full bg-[rgba(232,148,58,0.14)] -z-0"
-                      transition={HIGHLIGHT_SPRING}
-                    />
-                  )}
-                  <span className="relative z-10">{n.label}</span>
+                  {n.label}
                 </button>
               );
             })}
@@ -178,29 +266,24 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
 
       {/* ═══════════ Mobile — floating bottom dock ═══════════ */}
       <nav className="sm:hidden fixed bottom-4 left-0 right-0 mx-auto z-[100] w-fit max-w-[calc(100vw-12px)]">
-        <div className="nav-dock">
+        <div className="nav-dock" ref={mobInd.containerRef}>
+          <Indicator box={mobInd.box} instant={mobInd.instant} />
           {NAV_ITEMS.map((n) => {
             const Icon = n.icon;
             const isActive = activeNavId === n.id;
             return (
               <button
                 key={n.id}
+                ref={mobInd.itemRef(n.id)}
                 onClick={() => navigate(n.id)}
                 className={`
-                  relative flex items-center justify-center rounded-full px-2 py-2.5
+                  relative z-10 flex items-center justify-center rounded-full px-2 py-2.5
                   bg-transparent border-none cursor-pointer outline-none font-[inherit]
                   ${isActive ? "text-[var(--accent-1)]" : "text-[var(--fg-2)]"}
                 `}
                 aria-label={n.label}
               >
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-highlight-mobile"
-                    className="absolute inset-0 rounded-full bg-[rgba(232,148,58,0.14)]"
-                    transition={HIGHLIGHT_SPRING}
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5">
                   <Icon size={19} className="flex-shrink-0" />
                   <AnimatePresence initial={false}>
                     {isActive && (
@@ -221,10 +304,10 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
             );
           })}
 
-          <div className="w-px h-6 bg-[var(--border)] mx-0.5 flex-shrink-0" />
+          <div className="relative z-10 w-px h-6 bg-[var(--border)] mx-0.5 flex-shrink-0" />
 
           <button
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
+            className="relative z-10 flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
             onClick={() => setSearchOpen(true)}
             aria-label="Search"
           >
@@ -232,7 +315,7 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
           </button>
 
           <button
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
+            className="relative z-10 flex items-center justify-center w-[36px] h-[36px] rounded-full flex-shrink-0 bg-transparent border-none cursor-pointer text-[var(--fg-2)] active:text-[var(--accent-1)] outline-none transition-colors"
             onClick={toggle}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
@@ -336,6 +419,7 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
           box-shadow: 0 2px 16px var(--shadow);
         }
         .nav-dock {
+          position: relative;
           display: flex;
           align-items: center;
           gap: 2px;
