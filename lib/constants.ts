@@ -2,7 +2,7 @@
 export type EventType = "speaker" | "organizer" | "attendee";
 
 /* ─── Navbar search ─── */
-export type SearchCategory = "Section" | "Skill" | "Hobby" | "Event";
+export type SearchCategory = "Section" | "Skill" | "Hobby" | "Event" | "Project";
 
 export type SearchEntry = {
   label: string;

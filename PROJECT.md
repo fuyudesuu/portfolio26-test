@@ -90,9 +90,12 @@ Dark mode (toggled via .dark class on <html>):
 
 | Route | Content | Key Interactions |
 |---|---|---|
-| `/` (Home) | Hero + About + Hobbies preview (2 cards) + Events preview (3 items) + Contact | Parallax hero, scroll-triggered reveals, "View all" links to sub-pages |
+| `/` (Home) | Hero + About (bio) + Résumé teaser + Leisures (Hobbies + Events combined) + Contact | Parallax hero, scroll-triggered reveals, "View all" links to sub-pages |
+| `/resume` | Work Experience, Education, Skills (categorized), Projects | Back button, fade-in cards, timeline; content from `content/resume.md` |
 | `/hobbies` | Full list of hobbies with expanded descriptions | Back button, fade-in cards, accent color bars |
 | `/events` | Timeline with all events, filter by type, expandable cards | Type filter pills, click-to-expand with AnimatePresence, timeline dots |
+
+**Nav grouping:** the navbar is `About · Resume · Leisures ▾ · Contact`, where **Leisures** is an expandable group holding **Hobbies** and **Events** (desktop dropdown / mobile popover). Skills live on `/resume` (categorized), not in About.
 
 ### Components
 

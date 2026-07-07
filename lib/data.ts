@@ -1,22 +1,54 @@
 import {
   Camera, Music, Code2, Bike, User, Heart, CalendarDays, Phone,
+  FileText, Compass,
   type LucideIcon,
 } from "lucide-react";
 
 /* ─── Navigation ─── */
-export type NavItem = {
+export type NavLeaf = {
   label: string;
   id: string;
   icon: LucideIcon;
   type: "scroll" | "page";
 };
 
+export type NavItem =
+  | NavLeaf
+  | {
+      label: string;
+      id: string;
+      icon: LucideIcon;
+      type: "group";
+      children: NavLeaf[];
+    };
+
 export const NAV_ITEMS: NavItem[] = [
   { label: "About", id: "about", icon: User, type: "scroll" },
-  { label: "Hobbies", id: "hobbies", icon: Heart, type: "page" },
-  { label: "Events", id: "events", icon: CalendarDays, type: "page" },
+  { label: "Resume", id: "resume", icon: FileText, type: "page" },
+  {
+    label: "Leisures",
+    id: "leisures",
+    icon: Compass,
+    type: "group",
+    children: [
+      { label: "Hobbies", id: "hobbies", icon: Heart, type: "page" },
+      { label: "Events", id: "events", icon: CalendarDays, type: "page" },
+    ],
+  },
   { label: "Contact", id: "contact", icon: Phone, type: "scroll" },
 ];
+
+/** Every navigable leaf (top-level leaves + group children), for navigate() + search. */
+export const NAV_LEAVES: NavLeaf[] = NAV_ITEMS.flatMap((n) =>
+  n.type === "group" ? n.children : [n]
+);
+
+/** Map any nav id (leaf or child) to the top-level item that should highlight for it. */
+export const LEAF_TO_TOP: Record<string, string> = NAV_ITEMS.reduce((m, n) => {
+  m[n.id] = n.id;
+  if (n.type === "group") n.children.forEach((c) => (m[c.id] = n.id));
+  return m;
+}, {} as Record<string, string>);
 
 /* ─── Skills ─── */
 export const SKILLS: string[] = [

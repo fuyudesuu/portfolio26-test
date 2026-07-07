@@ -1,13 +1,14 @@
-import { getAboutProfile, getAboutNote, getHobbies, getEvents } from "@/lib/content";
+import { getAboutProfile, getAboutNote, getHobbies, getEvents, getResume } from "@/lib/content";
 import Hero from "@/components/sections/Hero";
 import About from "@/components/sections/About";
-import HobbiesPreview from "@/components/sections/HobbiesPreview";
-import EventsPreview from "@/components/sections/EventsPreview";
+import ResumePreview from "@/components/sections/ResumePreview";
+import LeisuresPreview from "@/components/sections/LeisuresPreview";
 import Contact from "@/components/sections/Contact";
 
 export default function HomePage() {
   const profile = getAboutProfile();
   const note = getAboutNote();
+  const resume = getResume();
   const hobbies = getHobbies().map((h) => ({
     slug: h.slug,
     title: h.title,
@@ -32,8 +33,8 @@ export default function HomePage() {
     <>
       <Hero profile={profile} />
       <About profile={profile} note={note} />
-      <HobbiesPreview hobbies={hobbies.slice(0, 2)} />
-      <EventsPreview events={events.slice(0, 3)} />
+      <ResumePreview resume={resume} />
+      <LeisuresPreview hobbies={hobbies.slice(0, 2)} events={events.slice(0, 3)} />
       <Contact />
     </>
   );

@@ -3,22 +3,22 @@
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Sun, Moon, CornerDownLeft } from "lucide-react";
-import { NAV_ITEMS } from "@/lib/data";
+import { Search, Sun, Moon, CornerDownLeft, ChevronDown } from "lucide-react";
+import { NAV_ITEMS, NAV_LEAVES, LEAF_TO_TOP } from "@/lib/data";
 import { useActiveSection } from "@/lib/hooks";
 import { useTheme } from "@/lib/theme";
 import type { SearchEntry } from "@/lib/constants";
 
 /**
- * Map the home page's scroll sections to a nav item id, so the highlight
- * can glide through every nav item as the user scrolls — including the
- * Hobbies/Events preview sections, which link out to their own pages.
+ * Map the home page's scroll sections to a top-level nav id, so the highlight
+ * glides through the nav as the user scrolls. Hobbies + Events live under the
+ * "Leisures" group, so the combined home preview maps to "leisures".
  */
 const SECTION_TO_NAV: Record<string, string> = {
   hero: "",
   about: "about",
-  "hobbies-preview": "hobbies",
-  "events-preview": "events",
+  "resume-preview": "resume",
+  leisures: "leisures",
   contact: "contact",
 };
 
@@ -31,35 +31,32 @@ type Box = { left: number; top: number; width: number; height: number; ready: bo
 const EMPTY_BOX: Box = { left: 0, top: 0, width: 0, height: 0, ready: false };
 
 /**
- * A single persistent sliding-highlight indicator.
- *
- * Instead of mounting a Framer `layoutId` pill inside whichever button is
- * active (which pops across Next.js route changes because the unmount/mount
- * handshake is fragile), we keep one element mounted and animate it to the
- * measured box of the active button. It can never "appear from nowhere" — it
- * just springs from where it is to the new target.
- *
- * A short rAF loop re-measures for ~380ms after each change so the indicator
- * also tracks layout that animates in (e.g. the mobile label reveal / reflow).
+ * A single persistent sliding highlight. It stays mounted and animates to the
+ * measured box of the active button, so it can never "pop" across route changes.
+ * Measured via getBoundingClientRect relative to the container, which is robust
+ * even when a button is nested inside a positioned wrapper (the group).
  */
 function useSlidingIndicator(activeKey: string, dep: unknown) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const items = useRef<Record<string, HTMLElement | null>>({});
   const refCbs = useRef<Record<string, (el: HTMLElement | null) => void>>({});
   const [box, setBox] = useState<Box>(EMPTY_BOX);
-  const instant = useRef(true); // first placement should not animate in
+  const instant = useRef(true);
 
   function measureInto(key: string) {
     const el = items.current[key];
-    if (!el || !containerRef.current) {
+    const c = containerRef.current;
+    if (!el || !c) {
       setBox((p) => (p.ready ? { ...p, ready: false } : p));
       return;
     }
+    const cr = c.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
     const next: Box = {
-      left: el.offsetLeft,
-      top: el.offsetTop,
-      width: el.offsetWidth,
-      height: el.offsetHeight,
+      left: er.left - cr.left - c.clientLeft,
+      top: er.top - cr.top - c.clientTop,
+      width: er.width,
+      height: er.height,
       ready: true,
     };
     setBox((p) =>
@@ -102,11 +99,11 @@ function useSlidingIndicator(activeKey: string, dep: unknown) {
   return { containerRef, itemRef, box, instant };
 }
 
-function Indicator({ box, instant, className }: { box: Box; instant: React.MutableRefObject<boolean>; className?: string }) {
+function Indicator({ box, instant }: { box: Box; instant: React.MutableRefObject<boolean> }) {
   return (
     <motion.div
       aria-hidden
-      className={`absolute rounded-full bg-[rgba(232,148,58,0.14)] pointer-events-none ${className ?? ""}`}
+      className="absolute rounded-full bg-[rgba(232,148,58,0.14)] pointer-events-none"
       style={{ zIndex: 0 }}
       initial={false}
       animate={{ left: box.left, top: box.top, width: box.width, height: box.height, opacity: box.ready ? 1 : 0 }}
@@ -122,31 +119,30 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
 
   const isHome = pathname === "/" || pathname === "";
   const active = useActiveSection(
-    isHome ? ["hero", "about", "hobbies-preview", "events-preview", "contact"] : []
+    isHome ? ["hero", "about", "resume-preview", "leisures", "contact"] : []
   );
 
-  // The currently highlighted nav id: derived from the scrolled section on
-  // home, or from the current route on sub-pages. Falls back to the first nav
-  // item so there is always exactly one highlighted item.
-  let activeNavId = isHome
-    ? SECTION_TO_NAV[active] ?? ""
-    : pathname.replace(/^\//, "");
-  if (!activeNavId) activeNavId = NAV_ITEMS[0].id;
+  // Which top-level nav item is highlighted. On home it follows the scrolled
+  // section; on sub-pages it follows the route (Hobbies/Events → Leisures).
+  const rawId = isHome ? SECTION_TO_NAV[active] ?? "" : pathname.replace(/^\//, "");
+  let activeTopId = LEAF_TO_TOP[rawId] || "";
+  if (!activeTopId) activeTopId = NAV_ITEMS[0].id;
 
-  const deskInd = useSlidingIndicator(activeNavId, pathname);
-  const mobInd = useSlidingIndicator(activeNavId, pathname);
+  const deskInd = useSlidingIndicator(activeTopId, pathname);
+  const mobInd = useSlidingIndicator(activeTopId, pathname);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [selected, setSelected] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Close search on route change
+  // Close overlays on route change
   useEffect(() => {
     setSearchOpen(false);
     setSearchQ("");
+    setMenuOpen(false);
   }, [pathname]);
 
-  // Reset the highlighted result whenever the query or open state changes
   useEffect(() => {
     setSelected(0);
   }, [searchQ, searchOpen]);
@@ -158,21 +154,20 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
         e.preventDefault();
         setSearchOpen((o) => !o);
       }
+      if (e.key === "Escape") setMenuOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // The site navbar has no place in the admin area — that section renders its
-  // own header and tab bar. Bail out after hooks (React requires unconditional
-  // hook calls) so the component mounts but renders nothing on /admin/*.
   if (pathname.startsWith("/admin")) return null;
 
   function navigate(id: string) {
     setSearchOpen(false);
     setSearchQ("");
+    setMenuOpen(false);
 
-    const item = NAV_ITEMS.find((n) => n.id === id);
+    const item = NAV_LEAVES.find((n) => n.id === id);
 
     if (!item || item.type === "scroll") {
       if (!isHome) {
@@ -187,7 +182,6 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
     }
   }
 
-  // Search results: matches on non-empty query, otherwise a few section shortcuts
   const q = searchQ.trim().toLowerCase();
   const results = q
     ? searchIndex.filter((e) => e.label.toLowerCase().includes(q)).slice(0, 8)
@@ -209,6 +203,10 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
     }
   }
 
+  // Reusable list of the Leisures children for both dropdown + mobile popover
+  const leisures = NAV_ITEMS.find((n) => n.type === "group");
+  const leisureChildren = leisures && leisures.type === "group" ? leisures.children : [];
+
   return (
     <>
       {/* ═══════════ Desktop — static top bar ═══════════ */}
@@ -224,22 +222,67 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
           <div ref={deskInd.containerRef} className="relative flex-1 flex justify-center gap-1">
             <Indicator box={deskInd.box} instant={deskInd.instant} />
             {NAV_ITEMS.map((n) => {
-              const isActive = activeNavId === n.id;
+              const isActive = activeTopId === n.id;
+              const cls = `relative z-10 px-3.5 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer font-[inherit] flex items-center gap-1 ${
+                isActive ? "text-[var(--accent-1)]" : "text-[var(--fg-2)] hover:text-[var(--fg)]"
+              }`;
+
+              if (n.type === "group") {
+                return (
+                  <div
+                    key={n.id}
+                    className="relative z-10"
+                    onMouseEnter={() => setMenuOpen(true)}
+                    onMouseLeave={() => setMenuOpen(false)}
+                  >
+                    <button
+                      ref={deskInd.itemRef(n.id)}
+                      className={cls}
+                      onClick={() => setMenuOpen((o) => !o)}
+                      aria-haspopup="true"
+                      aria-expanded={menuOpen}
+                    >
+                      {n.label}
+                      <ChevronDown size={13} className={`transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`} style={{ opacity: 0.7 }} />
+                    </button>
+
+                    <AnimatePresence>
+                      {menuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                          transition={{ duration: 0.16, ease: [0.4, 0, 0.2, 1] }}
+                          className="absolute top-[calc(100%+10px)] left-1/2 w-[220px] origin-top"
+                          style={{ x: "-50%" }}
+                        >
+                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-1.5 shadow-[0_12px_36px_var(--shadow)]">
+                            {leisureChildren.map((c) => {
+                              const CIcon = c.icon;
+                              return (
+                                <button
+                                  key={c.id}
+                                  onClick={() => navigate(c.id)}
+                                  className="group/item w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left bg-transparent border-none cursor-pointer outline-none font-[inherit] hover:bg-[var(--bg-2)] transition-colors"
+                                >
+                                  <span className="flex items-center justify-center w-8 h-8 rounded-[10px] bg-[rgba(232,148,58,0.12)] text-[var(--accent-1)]">
+                                    <CIcon size={16} />
+                                  </span>
+                                  <span className="flex-1 text-[14px] font-semibold text-[var(--fg)]">{c.label}</span>
+                                  <ChevronDown size={14} className="-rotate-90 text-[var(--fg-3)] opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+
               return (
-                <button
-                  key={n.id}
-                  ref={deskInd.itemRef(n.id)}
-                  className={`
-                    relative z-10 px-3.5 py-1.5 rounded-full text-[13px] font-medium
-                    whitespace-nowrap transition-colors duration-200 outline-none border-none
-                    bg-transparent cursor-pointer font-[inherit]
-                    ${isActive
-                      ? "text-[var(--accent-1)]"
-                      : "text-[var(--fg-2)] hover:text-[var(--fg)]"
-                    }
-                  `}
-                  onClick={() => navigate(n.id)}
-                >
+                <button key={n.id} ref={deskInd.itemRef(n.id)} className={cls} onClick={() => navigate(n.id)}>
                   {n.label}
                 </button>
               );
@@ -266,22 +309,54 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
 
       {/* ═══════════ Mobile — floating bottom dock ═══════════ */}
       <nav className="sm:hidden fixed bottom-4 left-0 right-0 mx-auto z-[100] w-fit max-w-[calc(100vw-12px)]">
+        {/* Leisures popover, above the dock */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute bottom-[calc(100%+10px)] left-0 right-0 mx-auto w-[220px] z-[101]"
+            >
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-1.5 shadow-[0_16px_40px_var(--shadow)]">
+                {leisureChildren.map((c) => {
+                  const CIcon = c.icon;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => navigate(c.id)}
+                      className="w-full flex items-center gap-3 px-2.5 py-3 rounded-xl text-left bg-transparent border-none cursor-pointer outline-none font-[inherit] active:bg-[var(--bg-2)] transition-colors"
+                    >
+                      <span className="flex items-center justify-center w-9 h-9 rounded-[11px] bg-[rgba(232,148,58,0.12)] text-[var(--accent-1)]">
+                        <CIcon size={17} />
+                      </span>
+                      <span className="text-[15px] font-semibold text-[var(--fg)]">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="nav-dock" ref={mobInd.containerRef}>
           <Indicator box={mobInd.box} instant={mobInd.instant} />
           {NAV_ITEMS.map((n) => {
             const Icon = n.icon;
-            const isActive = activeNavId === n.id;
+            const isActive = activeTopId === n.id;
+            const isGroup = n.type === "group";
             return (
               <button
                 key={n.id}
                 ref={mobInd.itemRef(n.id)}
-                onClick={() => navigate(n.id)}
-                className={`
-                  relative z-10 flex items-center justify-center rounded-full px-2 py-2.5
-                  bg-transparent border-none cursor-pointer outline-none font-[inherit]
-                  ${isActive ? "text-[var(--accent-1)]" : "text-[var(--fg-2)]"}
-                `}
+                onClick={() => (isGroup ? setMenuOpen((o) => !o) : navigate(n.id))}
+                className={`relative z-10 flex items-center justify-center rounded-full px-2 py-2.5 bg-transparent border-none cursor-pointer outline-none font-[inherit] ${
+                  isActive ? "text-[var(--accent-1)]" : "text-[var(--fg-2)]"
+                }`}
                 aria-label={n.label}
+                aria-haspopup={isGroup ? "true" : undefined}
+                aria-expanded={isGroup ? menuOpen : undefined}
               >
                 <span className="flex items-center gap-1.5">
                   <Icon size={19} className="flex-shrink-0" />
@@ -293,9 +368,10 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
                         animate={{ width: "auto", opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
                         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className="overflow-hidden whitespace-nowrap text-[13px] font-semibold flex-shrink-0"
+                        className="overflow-hidden whitespace-nowrap text-[13px] font-semibold flex-shrink-0 flex items-center gap-0.5"
                       >
                         {n.label}
+                        {isGroup && <ChevronDown size={12} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -324,6 +400,11 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
         </div>
       </nav>
 
+      {/* Mobile tap-away backdrop for the Leisures popover */}
+      {menuOpen && (
+        <div className="sm:hidden fixed inset-0 z-[99]" onClick={() => setMenuOpen(false)} aria-hidden />
+      )}
+
       {/* ═══════════ Search command palette (desktop + mobile) ═══════════ */}
       <AnimatePresence>
         {searchOpen && (
@@ -342,8 +423,6 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
               role="dialog"
               aria-modal="true"
-              /* Center via auto-margins, not translate-x: Framer sets an inline
-                 transform for the y/scale animation, which would override it. */
               className="fixed z-[110] top-[12vh] left-0 right-0 mx-auto w-[calc(100vw-32px)] max-w-[520px] bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-[0_16px_48px_var(--shadow)]"
             >
               <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
@@ -377,22 +456,14 @@ export default function Navbar({ searchIndex = [] }: { searchIndex?: SearchEntry
                       key={`${r.category}-${r.label}-${i}`}
                       onMouseEnter={() => setSelected(i)}
                       onClick={() => navigate(r.navId)}
-                      className={`
-                        w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl
-                        text-left border-none cursor-pointer outline-none font-[inherit] transition-colors
-                        ${i === selected ? "bg-[var(--border)]" : "bg-transparent"}
-                      `}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left border-none cursor-pointer outline-none font-[inherit] transition-colors ${
+                        i === selected ? "bg-[var(--border)]" : "bg-transparent"
+                      }`}
                     >
-                      <span className="text-[15px] font-medium text-[var(--fg)] truncate">
-                        {r.label}
-                      </span>
+                      <span className="text-[15px] font-medium text-[var(--fg)] truncate">{r.label}</span>
                       <span className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-[11px] uppercase tracking-wide text-[var(--fg-3)]">
-                          {r.category}
-                        </span>
-                        {i === selected && (
-                          <CornerDownLeft size={13} className="text-[var(--fg-3)]" />
-                        )}
+                        <span className="text-[11px] uppercase tracking-wide text-[var(--fg-3)]">{r.category}</span>
+                        {i === selected && <CornerDownLeft size={13} className="text-[var(--fg-3)]" />}
                       </span>
                     </button>
                   ))
