@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
-import { FadeIn, TiltCard, SectionHeader } from "@/components/ui";
+import { FadeIn, TiltCard } from "@/components/ui";
 import { resolveIcon } from "@/lib/icons";
 import { ACCENT_COLORS } from "@/lib/constants";
 
@@ -18,8 +18,13 @@ type HobbyData = {
 
 export default function HobbiesPreview({ hobbies }: { hobbies: HobbyData[] }) {
   return (
-    <section id="hobbies-preview" className="py-20 px-5">
-      <SectionHeader title="Hobbies" subtitle="Things I do for fun" />
+    <div>
+      <div className="flex items-end justify-between max-w-[700px] mx-auto w-full mb-5">
+        <h3 className="text-xl font-bold text-[var(--fg)]">Hobbies</h3>
+        <Link href="/hobbies" className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--accent-1)] no-underline hover:gap-2 transition-all">
+          View all <ChevronRight size={15} />
+        </Link>
+      </div>
       <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 max-w-[700px] mx-auto w-full">
         {hobbies.map((h, i) => {
           const Icon = resolveIcon(h.iconName);
@@ -35,7 +40,7 @@ export default function HobbiesPreview({ hobbies }: { hobbies: HobbyData[] }) {
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 backdrop-blur-md bg-white/10 border border-white/20" style={{ color }}>
                       <Icon size={22} />
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-1">{h.title}</h3>
+                    <h4 className="text-lg font-bold text-white mb-1">{h.title}</h4>
                     <p className="text-[13px] leading-relaxed text-white/60">{h.summary}</p>
                   </div>
                 </div>
@@ -44,11 +49,6 @@ export default function HobbiesPreview({ hobbies }: { hobbies: HobbyData[] }) {
           );
         })}
       </div>
-      <div className="text-center mt-8">
-        <Link href="/hobbies" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-transparent text-[var(--fg)] border-[1.5px] border-[var(--border)] hover:border-[var(--fg-3)] hover:-translate-y-0.5 transition-all duration-250 no-underline">
-          View all hobbies <ChevronRight size={16} />
-        </Link>
-      </div>
-    </section>
+    </div>
   );
 }

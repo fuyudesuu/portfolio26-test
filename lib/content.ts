@@ -82,3 +82,50 @@ export function getAboutNote(): AboutNote {
   const { content } = matter(fs.readFileSync(fp, "utf-8"));
   return { content: content.trim() };
 }
+
+/* ═══ RESUME ═══ */
+export type ResumeExperience = {
+  role: string; company: string; location: string;
+  start: string; end: string; bullets: string[]; tags: string[];
+};
+export type ResumeEducation = {
+  degree: string; school: string; location: string; start: string; end: string; note: string;
+};
+export type ResumeSkillCategory = { category: string; items: string[] };
+export type ResumeProject = { name: string; description: string; tags: string[]; link: string };
+export type Resume = {
+  title: string; subtitle: string; intro: string;
+  experience: ResumeExperience[];
+  education: ResumeEducation[];
+  skills: ResumeSkillCategory[];
+  projects: ResumeProject[];
+};
+
+export function getResume(): Resume {
+  const empty: Resume = {
+    title: "Resume", subtitle: "", intro: "",
+    experience: [], education: [], skills: [], projects: [],
+  };
+  const fp = path.join(contentDir, "resume.md");
+  if (!fs.existsSync(fp)) return empty;
+  const { data } = matter(fs.readFileSync(fp, "utf-8"));
+  return {
+    title: data.title || "Resume",
+    subtitle: data.subtitle || "",
+    intro: data.intro || "",
+    experience: (data.experience || []).map((e: Partial<ResumeExperience>) => ({
+      role: e.role || "", company: e.company || "", location: e.location || "",
+      start: e.start || "", end: e.end || "", bullets: e.bullets || [], tags: e.tags || [],
+    })),
+    education: (data.education || []).map((e: Partial<ResumeEducation>) => ({
+      degree: e.degree || "", school: e.school || "", location: e.location || "",
+      start: e.start || "", end: e.end || "", note: e.note || "",
+    })),
+    skills: (data.skills || []).map((s: Partial<ResumeSkillCategory>) => ({
+      category: s.category || "", items: s.items || [],
+    })),
+    projects: (data.projects || []).map((p: Partial<ResumeProject>) => ({
+      name: p.name || "", description: p.description || "", tags: p.tags || [], link: p.link || "",
+    })),
+  };
+}

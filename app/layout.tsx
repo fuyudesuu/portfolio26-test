@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
 import Navbar from "@/components/nav/Navbar";
-import { NAV_ITEMS } from "@/lib/data";
-import { getHobbies, getEvents, getAboutProfile } from "@/lib/content";
+import { NAV_LEAVES } from "@/lib/data";
+import { getHobbies, getEvents, getResume, getAboutProfile } from "@/lib/content";
 import type { SearchEntry } from "@/lib/constants";
 
 // Derive metadata from the CMS profile so the tab title / link preview always
@@ -28,10 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   // Build a live search index from the actual markdown content, so search
-  // reflects whatever is currently published (sections, skills, hobbies, events).
+  // reflects whatever is currently published.
+  const resume = getResume();
   const searchIndex: SearchEntry[] = [
-    ...NAV_ITEMS.map((n) => ({ label: n.label, category: "Section" as const, navId: n.id })),
-    ...getAboutProfile().skills.map((s) => ({ label: s, category: "Skill" as const, navId: "about" })),
+    ...NAV_LEAVES.map((n) => ({ label: n.label, category: "Section" as const, navId: n.id })),
+    ...resume.skills.flatMap((c) => c.items).map((s) => ({ label: s, category: "Skill" as const, navId: "resume" })),
+    ...resume.projects.map((p) => ({ label: p.name, category: "Project" as const, navId: "resume" })),
     ...getHobbies().map((h) => ({ label: h.title, category: "Hobby" as const, navId: "hobbies" })),
     ...getEvents().map((e) => ({ label: e.title, category: "Event" as const, navId: "events" })),
   ];

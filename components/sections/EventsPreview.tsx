@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight, MapPin, Clock } from "lucide-react";
-import { FadeIn, SectionHeader } from "@/components/ui";
+import { FadeIn } from "@/components/ui";
 import { EVENT_BADGE_CONFIG, ACCENT_COLORS } from "@/lib/constants";
 import type { EventType } from "@/lib/constants";
 
@@ -19,8 +19,13 @@ type EventData = {
 
 export default function EventsPreview({ events }: { events: EventData[] }) {
   return (
-    <section id="events-preview" className="py-20 px-5">
-      <SectionHeader title="Events" subtitle="Speaking, organizing & attending" />
+    <div>
+      <div className="flex items-end justify-between max-w-[640px] mx-auto w-full mb-5">
+        <h3 className="text-xl font-bold text-[var(--fg)]">Events</h3>
+        <Link href="/events" className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--accent-1)] no-underline hover:gap-2 transition-all">
+          View all <ChevronRight size={15} />
+        </Link>
+      </div>
       <div className="max-w-[640px] mx-auto w-full flex flex-col gap-3.5">
         {events.map((ev, i) => {
           const badge = EVENT_BADGE_CONFIG[ev.type];
@@ -33,7 +38,7 @@ export default function EventsPreview({ events }: { events: EventData[] }) {
                   <span className="text-xs font-semibold px-3 py-1 rounded-full border-[1.5px] bg-transparent" style={{ color, borderColor: color }}>{badge.label}</span>
                   <span className="text-xs text-[var(--fg-3)] flex items-center gap-1"><Clock size={12} /> {ev.date}</span>
                 </div>
-                <h3 className="text-lg font-bold text-[var(--fg)] mb-1.5">{ev.title}</h3>
+                <h4 className="text-lg font-bold text-[var(--fg)] mb-1.5">{ev.title}</h4>
                 <p className="text-[13px] text-[var(--fg-3)] mb-1.5 flex items-center gap-1.5"><MapPin size={13} /> {ev.location}</p>
                 <p className="text-[13px] leading-relaxed text-[var(--fg-3)]">{ev.summary}</p>
               </div>
@@ -41,11 +46,6 @@ export default function EventsPreview({ events }: { events: EventData[] }) {
           );
         })}
       </div>
-      <div className="text-center mt-8">
-        <Link href="/events" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-pill text-sm font-semibold bg-transparent text-[var(--fg)] border-[1.5px] border-[var(--border)] hover:border-[var(--fg-3)] hover:-translate-y-0.5 transition-all duration-250 no-underline">
-          View all events <ChevronRight size={16} />
-        </Link>
-      </div>
-    </section>
+    </div>
   );
 }
