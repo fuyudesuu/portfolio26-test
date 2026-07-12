@@ -26,9 +26,15 @@ export function getEvents(): PortfolioEvent[] {
   const events = files.map((file) => {
     const raw = fs.readFileSync(path.join(dir, file), "utf-8");
     const { data, content } = matter(raw);
+    // YAML parses unquoted dates into Date objects; normalize both shapes to ISO yyyy-mm-dd
+    const date = data.date
+      ? data.date instanceof Date
+        ? data.date.toISOString().split("T")[0]
+        : String(data.date).split("T")[0]
+      : "";
     return {
       slug: file.replace(".md", ""),
-      title: data.title || "", date: data.date ? String(data.date).split("T")[0] : "",
+      title: data.title || "", date,
       location: data.location || "", type: (data.type || "attendee") as EventType,
       tags: data.tags || [], summary: data.summary || "",
       image: data.image || "", content: content.trim(),
@@ -42,6 +48,8 @@ export function getEvents(): PortfolioEvent[] {
 export type Hobby = {
   slug: string; title: string; icon: LucideIcon; iconName: string;
   accentIndex: number; summary: string; image: string; content: string;
+  /** Optional vertical Japanese tag rendered on the image tile (e.g. 自転車). */
+  kanjiTag: string;
 };
 
 export function getHobbies(): Hobby[] {
@@ -57,23 +65,37 @@ export function getHobbies(): Hobby[] {
       icon: ICON_MAP[iconName] || Code2, iconName,
       accentIndex: data.accentIndex || 1, summary: data.summary || "",
       image: data.image || "", content: content.trim(),
+      kanjiTag: data.kanjiTag || "",
     };
   });
 }
 
 /* ═══ ABOUT ═══ */
+export type AboutFact = { label: string; value: string };
 export type AboutProfile = {
   name: string; title: string; tagline: string; eyebrow: string;
   skills: string[]; photo: string; bio: string;
+  /** Katakana reading of the name, shown under the hero headline. */
+  kana: string;
+  /** Big typed-out lede on the About section; wrap one word in *asterisks* to accent it. */
+  statement: string;
+  location: string;
+  /** Short label/value rows for the About facts card. */
+  facts: AboutFact[];
 };
 export type AboutNote = { content: string };
 
 export function getAboutProfile(): AboutProfile {
   const fp = path.join(contentDir, "about", "profile.md");
-  if (!fs.existsSync(fp)) return { name: "", title: "", tagline: "", eyebrow: "", skills: [], photo: "", bio: "" };
+  if (!fs.existsSync(fp)) {
+    return { name: "", title: "", tagline: "", eyebrow: "", skills: [], photo: "", bio: "",
+      kana: "", statement: "", location: "", facts: [] };
+  }
   const { data, content } = matter(fs.readFileSync(fp, "utf-8"));
   return { name: data.name || "", title: data.title || "", tagline: data.tagline || "",
-    eyebrow: data.eyebrow || "", skills: data.skills || [], photo: data.photo || "", bio: content.trim() };
+    eyebrow: data.eyebrow || "", skills: data.skills || [], photo: data.photo || "", bio: content.trim(),
+    kana: data.kana || "", statement: data.statement || "", location: data.location || "",
+    facts: (data.facts || []).map((f: Partial<AboutFact>) => ({ label: f.label || "", value: f.value || "" })) };
 }
 
 export function getAboutNote(): AboutNote {

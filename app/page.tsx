@@ -16,6 +16,7 @@ export default function HomePage() {
     accentIndex: h.accentIndex,
     summary: h.summary,
     image: h.image,
+    kanjiTag: h.kanjiTag,
     content: h.content,
   }));
   const events = getEvents().map((e) => ({

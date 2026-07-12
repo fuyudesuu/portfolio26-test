@@ -50,6 +50,22 @@ export const LEAF_TO_TOP: Record<string, string> = NAV_ITEMS.reduce((m, n) => {
   return m;
 }, {} as Record<string, string>);
 
+/* ─── Hero ticker + micro-label ─── */
+/** Items streamed through the hero's baseline marquee. `jp` marks Japanese glyphs. */
+export const TICKER_ITEMS: { label: string; jp?: boolean }[] = [
+  { label: "Design systems" },
+  { label: "ものづくり", jp: true },
+  { label: "TypeScript" },
+  { label: "Motion" },
+  { label: "職人気質", jp: true },
+  { label: "React & Next.js" },
+  { label: "Sydney, Australia" },
+  { label: "間を大切に", jp: true },
+];
+
+/** Engineered micro-caption in the hero's bottom-left corner. */
+export const HERO_COORDS = "SYD.AU // 33.87°S 151.21°E";
+
 /* ─── Skills ─── */
 export const SKILLS: string[] = [
   "React", "TypeScript", "Next.js", "Tailwind",

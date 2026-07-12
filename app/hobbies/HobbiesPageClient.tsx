@@ -21,7 +21,7 @@ export default function HobbiesPageClient({ hobbies }: { hobbies: HobbyData[] })
 
   return (
     <div className="pt-20 min-h-screen">
-      <PageHeader title="Hobbies" subtitle="Things I do for fun" description="Beyond the screen, these are the things that keep me curious and energized." onBack={() => router.push("/")} />
+      <PageHeader title="Hobbies" subtitle="Things I do for fun" jp="趣味" description="Beyond the screen, these are the things that keep me curious and energized." onBack={() => router.push("/")} />
       <div className="max-w-[720px] mx-auto px-5 pb-24 flex flex-col gap-6">
         {hobbies.map((h, i) => {
           const Icon = resolveIcon(h.iconName);

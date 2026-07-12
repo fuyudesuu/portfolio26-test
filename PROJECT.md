@@ -42,6 +42,14 @@ A personal portfolio website designed to showcase professional information, hobb
 
 **Personality:** Kinetic and expressive — motion-forward, layered elements, creative scroll interactions. Not the standard dark-glass template.
 
+**Design language (Phase 4 front-page redesign):** an editorial layout with a quiet Japanese typography layer and Endfield/Valorant-style HUD geometry:
+- **Kickers** — every section opens `// 01 About 紹介`: a `//`-prefixed eyebrow with scroll-order index and a mincho-serif kanji label, then a letter-by-letter revealed title beside a `////` slash rule whose pattern crawls with scroll.
+- **Slash strips** replace solid rules everywhere (section rules, event timeline rails, card edge accents); square timeline dots instead of circles.
+- **HUD details** — corner brackets frame the hero name and About statement; registration `+` marks pin band corners; micro-captions (`SYD.AU // 33.87°S 151.21°E`, `EOF // おわり`) and a measuring rail live in the hero margins; anchored to layout lines, never free-floating.
+- **Bilingual labels** — event badges (`Speaker 登壇`), kanji tags on hobby tiles (自転車), katakana name reading under the hero headline.
+- **Hero** locks to exactly one viewport (100svh) with a skills/location ticker marquee on its baseline (hidden on phones, where the bottom dock lives).
+- **About statement** types itself out with a blinking caret; one word accented in the amber→coral gradient.
+
 **Color palette (CSS custom properties, defined in `globals.css`):**
 
 ```
@@ -90,7 +98,7 @@ Dark mode (toggled via .dark class on <html>):
 
 | Route | Content | Key Interactions |
 |---|---|---|
-| `/` (Home) | Hero + About (bio) + Résumé teaser + Leisures (Hobbies + Events combined) + Contact | Parallax hero, scroll-triggered reveals, "View all" links to sub-pages |
+| `/` (Home) | Hero + About (statement + bio/now/facts cards) + Résumé career line (full-bleed band) + Leisures (hobby collage + event rail) + Contact closing statement | One-viewport hero with ticker, typewriter statement, letter-reveal headings, event cascade, tilt cards, "View all" links |
 | `/resume` | Work Experience, Education, Skills (categorized), Projects | Back button, fade-in cards, timeline; content from `content/resume.md` |
 | `/hobbies` | Full list of hobbies with expanded descriptions | Back button, fade-in cards, accent color bars |
 | `/events` | Timeline with all events, filter by type, expandable cards | Type filter pills, click-to-expand with AnimatePresence, timeline dots |
@@ -101,16 +109,20 @@ Dark mode (toggled via .dark class on <html>):
 
 | Component | Location | Purpose |
 |---|---|---|
-| `Navbar` | `components/nav/Navbar.tsx` | Signature glass bar → orb retraction (CSS transitions), routing, search, theme toggle |
-| `Hero` | `components/sections/Hero.tsx` | Parallax via `useScroll`/`useTransform`, kinetic floating shapes with scroll-linked rotation |
-| `About` | `components/sections/About.tsx` | 2-col grid with bio + skills |
-| `HobbiesPreview` | `components/sections/HobbiesPreview.tsx` | 2 image cards with gradient overlay + "View all" link |
-| `EventsPreview` | `components/sections/EventsPreview.tsx` | 3 events + "View all" link |
-| `Contact` | `components/sections/Contact.tsx` | Social pill links |
-| `FadeIn` | `components/ui/index.tsx` | Scroll-triggered reveal (Framer Motion `whileInView`) |
-| `TiltCard` | `components/ui/index.tsx` | 3D perspective tilt on hover |
-| `SectionHeader` | `components/ui/index.tsx` | Reusable subtitle + title block |
-| `PageHeader` | `components/ui/index.tsx` | Sub-page header with back button |
+| `Navbar` | `components/nav/Navbar.tsx` | Static glass bar, grouped nav (Leisures ▾), sliding highlight, search, theme toggle |
+| `Hero` | `components/sections/Hero.tsx` | One-viewport hero: bracket-framed name, kana, margin rail + tategaki column, baseline ticker |
+| `About` | `components/sections/About.tsx` | Typewriter statement + bio/now/facts card row |
+| `ResumePreview` | `components/sections/ResumePreview.tsx` | Full-bleed hatched band with 3-stop career line + skill chips |
+| `LeisuresPreview` | `components/sections/LeisuresPreview.tsx` | 7/5 grid composing hobby collage + event rail |
+| `HobbiesPreview` | `components/sections/HobbiesPreview.tsx` | Offset image collage with tilt + kanji tags |
+| `EventsPreview` | `components/sections/EventsPreview.tsx` | Compact timeline: square dots, slash rail, bilingual badges, cascade reveal |
+| `Contact` | `components/sections/Contact.tsx` | Closing statement band: gradient headline, big email link, socials, EOF micro-label |
+| `FadeIn` | `components/ui/index.tsx` | Scroll-triggered reveal (up/left/down) |
+| `TiltCard` | `components/ui/index.tsx` | 3D perspective tilt with phase-managed transitions |
+| `Kicker` | `components/ui/index.tsx` | `// 01 Label 漢字` eyebrow + letter-reveal title + slash rule |
+| `LetterReveal` / `Typewriter` | `components/ui/index.tsx` | Per-character heading reveal / typed statement with caret |
+| `SlashRule` / `Corners` / `PlusMark` / `Accent` | `components/ui/index.tsx` | HUD primitives: crawling slash rule, corner brackets, registration marks, gradient text |
+| `PageHeader` | `components/ui/index.tsx` | Sub-page header on the kicker language (`// label 漢字`, letter-reveal title, back link) |
 
 ### Shared Utilities
 

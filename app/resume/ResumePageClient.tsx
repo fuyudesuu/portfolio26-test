@@ -15,6 +15,7 @@ export default function ResumePageClient({ resume }: { resume: Resume }) {
       <PageHeader
         title={resume.title || "Resume"}
         subtitle={resume.subtitle || "Curriculum vitae"}
+        jp="経歴"
         description={resume.intro}
         onBack={() => router.push("/")}
       />
@@ -148,9 +149,10 @@ export default function ResumePageClient({ resume }: { resume: Resume }) {
 function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-3 mb-5">
+      <span className="text-[12px] font-extrabold tracking-[0.02em] text-[var(--accent-1)] flex-shrink-0">{"//"}</span>
       <span className="text-[var(--accent-1)] flex-shrink-0">{icon}</span>
       <h2 className="text-[13px] font-bold tracking-[0.08em] uppercase text-[var(--fg-3)] whitespace-nowrap">{label}</h2>
-      <span className="flex-1 h-px bg-[var(--border)]" />
+      <span aria-hidden className="slash-strip flex-1 h-[7px] opacity-20" />
     </div>
   );
 }

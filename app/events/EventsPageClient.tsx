@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Clock, ChevronDown } from "lucide-react";
 import { FadeIn, PageHeader } from "@/components/ui";
-import { EVENT_BADGE_CONFIG, ACCENT_COLORS } from "@/lib/constants";
+import { EVENT_BADGE_CONFIG, ACCENT_COLORS, formatEventDate } from "@/lib/constants";
 import type { EventType } from "@/lib/constants";
 
 type EventData = {
@@ -35,7 +35,7 @@ export default function EventsPageClient({ events }: { events: EventData[] }) {
 
   return (
     <div className="pt-20 min-h-screen">
-      <PageHeader title="Events" subtitle="Speaking, organizing & attending" description="A timeline of conferences, meetups, and hackathons I've been part of." onBack={() => router.push("/")} />
+      <PageHeader title="Events" subtitle="Speaking, organizing & attending" jp="行事" description="A timeline of conferences, meetups, and hackathons I've been part of." onBack={() => router.push("/")} />
       <div className="max-w-[720px] mx-auto px-5 pb-24">
         <div className="flex gap-2 mb-8 flex-wrap">
           {FILTERS.map((f) => (
@@ -47,7 +47,7 @@ export default function EventsPageClient({ events }: { events: EventData[] }) {
         </div>
 
         <div className="relative">
-          <div className="absolute left-[19px] top-0 bottom-0 w-0.5 bg-[var(--border)] rounded-sm" />
+          <div aria-hidden className="slash-strip absolute left-[18px] top-0 bottom-0 w-1.5 opacity-35" />
           <div className="flex flex-col gap-5">
             {filtered.map((ev, i) => {
               const badge = EVENT_BADGE_CONFIG[ev.type];
@@ -57,13 +57,16 @@ export default function EventsPageClient({ events }: { events: EventData[] }) {
                 <FadeIn key={ev.slug} delay={i} direction="left">
                   <div className="flex gap-4">
                     <div className="w-7 min-w-[28px] flex flex-col items-center pt-8 relative z-10">
-                      <div className="w-3 h-3 rounded-full" style={{ background: color, boxShadow: "0 0 12px " + color + "44" }} />
+                      <div className="w-3 h-3" style={{ background: color, boxShadow: "0 0 12px " + color + "44" }} />
                     </div>
                     <div className={"flex-1 min-w-0 bg-[var(--bg-card)] border border-[var(--border)] rounded-card p-7 pl-8 cursor-pointer transition-all duration-300 " + (isOpen ? "shadow-[0_8px_32px_var(--shadow)]" : "hover:shadow-[0_6px_24px_var(--shadow)]")}
                       onClick={() => setExpanded(isOpen ? null : ev.slug)}>
                       <div className="flex items-center gap-2.5 mb-2.5 flex-wrap">
-                        <span className="text-xs font-semibold px-3 py-1 rounded-full border-[1.5px] bg-transparent" style={{ color, borderColor: color }}>{badge.label}</span>
-                        <span className="text-xs text-[var(--fg-3)] flex items-center gap-1"><Clock size={12} /> {ev.date}</span>
+                        <span className="text-xs font-semibold px-3 py-1 rounded-full border-[1.5px] bg-transparent" style={{ color, borderColor: color }}>
+                          {badge.label}
+                          <span className="jp ml-1.5 text-[11.5px] tracking-[0.12em]">{badge.jp}</span>
+                        </span>
+                        <span className="text-xs text-[var(--fg-3)] flex items-center gap-1"><Clock size={12} /> {formatEventDate(ev.date)}</span>
                       </div>
                       <h3 className="text-lg font-bold text-[var(--fg)] mb-1.5">{ev.title}</h3>
                       <p className="text-[13px] text-[var(--fg-3)] mb-1.5 flex items-center gap-1.5"><MapPin size={13} /> {ev.location}</p>
