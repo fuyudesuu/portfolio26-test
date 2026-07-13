@@ -69,11 +69,13 @@ export default function Hero({ profile }: HeroProps) {
           {profile.eyebrow}
         </motion.p>
 
-        {/* name block framed by HUD corner brackets */}
-        <motion.div className="relative inline-block" {...fadeUp(0.2)}>
-          <span aria-hidden className="absolute -left-4 -top-3 h-5 w-5 border-l-[1.5px] border-t-[1.5px] border-[var(--accent-1)] opacity-85" />
-          <span aria-hidden className="absolute -right-6 bottom-5 h-5 w-5 border-b-[1.5px] border-r-[1.5px] border-[var(--fg-3)] opacity-50" />
-          <h1 className="text-[clamp(52px,11vw,104px)] font-black leading-[0.95] tracking-[-0.05em] text-[var(--fg)]">
+        {/* name block framed by HUD corner brackets; the brackets live on the
+            h1 with em offsets so they scale with the clamp()ed display size
+            instead of drifting away at small widths */}
+        <motion.div className="inline-block" {...fadeUp(0.2)}>
+          <h1 className="relative text-[clamp(52px,11vw,104px)] font-black leading-[0.95] tracking-[-0.05em] text-[var(--fg)]">
+            <span aria-hidden className="absolute left-[-0.14em] top-[-0.08em] h-[0.2em] w-[0.2em] border-l-[1.5px] border-t-[1.5px] border-[var(--accent-1)] opacity-85" />
+            <span aria-hidden className="absolute bottom-[0.1em] right-[-0.22em] h-[0.2em] w-[0.2em] border-b-[1.5px] border-r-[1.5px] border-[var(--fg-3)] opacity-50" />
             {first}
             {surname && (
               <>
