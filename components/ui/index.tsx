@@ -82,12 +82,17 @@ export function LetterReveal({
   className = "",
   charDelay = 0.05,
   baseDelay = 0.15,
+  y = 14,
+  duration = 0.45,
 }: {
   text: string;
   as?: "h1" | "h2" | "h3" | "p" | "span";
   className?: string;
   charDelay?: number;
   baseDelay?: number;
+  /** Vertical rise distance per letter; 0 = pure fade. */
+  y?: number;
+  duration?: number;
 }) {
   const reduce = useReducedMotion();
   const [started, setStarted] = useState(false);
@@ -112,9 +117,9 @@ export function LetterReveal({
               <motion.span
                 key={ci}
                 className="inline-block"
-                initial={{ opacity: 0, y: 14 }}
+                initial={{ opacity: 0, y }}
                 animate={started ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.45, delay: d, ease: EASE_OUT }}
+                transition={{ duration, delay: d, ease: EASE_OUT }}
               >
                 {ch}
               </motion.span>
@@ -238,7 +243,7 @@ export function Accent({ children }: { children: ReactNode }) {
 
 /* ─── Slash rule ───
    The "////" divider line. Its pattern crawls with scroll position. */
-export function SlashRule({ className = "" }: { className?: string }) {
+export function SlashRule({ className = "", delay = 0.55 }: { className?: string; delay?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
 
@@ -263,8 +268,81 @@ export function SlashRule({ className = "" }: { className?: string }) {
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 0.22 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.7, delay: 0.55 }}
+      transition={{ duration: 0.7, delay }}
     />
+  );
+}
+
+/* ─── Eyebrow ───
+   The `// 01 Label 漢字` line, staged: the `//` slides in from the left
+   first, then the text follows letter by letter, the kanji last. */
+export function Eyebrow({
+  index,
+  label,
+  jp,
+  className = "",
+}: {
+  index?: string;
+  label: string;
+  jp?: string;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  const [started, setStarted] = useState(false);
+  const jpDelay = 0.32 + label.replace(/\s/g, "").length * 0.03 + 0.05;
+
+  const base =
+    "flex items-baseline gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-1)]";
+  const idxCls = "tabular-nums tracking-[0.08em] text-[var(--fg-3)]";
+  const jpCls = "jp text-[13px] font-medium normal-case tracking-[0.3em] text-[var(--fg-3)]";
+
+  if (reduce) {
+    return (
+      <div className={`${base} ${className}`}>
+        <span className="tracking-[0.02em]">{"//"}</span>
+        {index && <span className={idxCls}>{index}</span>}
+        <span>{label}</span>
+        {jp && <span className={jpCls}>{jp}</span>}
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      className={`${base} ${className}`}
+      onViewportEnter={() => setStarted(true)}
+      viewport={{ once: true, amount: 0.5 }}
+    >
+      <motion.span
+        className="tracking-[0.02em]"
+        initial={{ opacity: 0, x: -18 }}
+        animate={started ? { opacity: 1, x: 0 } : {}}
+        transition={{ duration: 0.4, ease: EASE_OUT }}
+      >
+        {"//"}
+      </motion.span>
+      {index && (
+        <motion.span
+          className={idxCls}
+          initial={{ opacity: 0 }}
+          animate={started ? { opacity: 1 } : {}}
+          transition={{ duration: 0.16, delay: 0.3 }}
+        >
+          {index}
+        </motion.span>
+      )}
+      <LetterReveal as="span" text={label} y={0} duration={0.16} charDelay={0.03} baseDelay={0.32} />
+      {jp && (
+        <motion.span
+          className={jpCls}
+          initial={{ opacity: 0 }}
+          animate={started ? { opacity: 1 } : {}}
+          transition={{ duration: 0.2, delay: jpDelay }}
+        >
+          {jp}
+        </motion.span>
+      )}
+    </motion.div>
   );
 }
 
@@ -315,25 +393,15 @@ export function Kicker({
 }) {
   return (
     <div className={`mb-11 ${className}`}>
-      <motion.div
-        className="mb-2 flex items-baseline gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-1)]"
-        initial={{ opacity: 0, x: -26 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, ease: EASE_OUT }}
-      >
-        <span className="tracking-[0.02em]">{"//"}</span>
-        {index && <span className="tabular-nums tracking-[0.08em] text-[var(--fg-3)]">{index}</span>}
-        <span>{label}</span>
-        {jp && <span className="jp text-[13px] font-medium normal-case tracking-[0.3em] text-[var(--fg-3)]">{jp}</span>}
-      </motion.div>
+      <Eyebrow index={index} label={label} jp={jp} className="mb-2" />
       <div className="flex items-center gap-6">
         <LetterReveal
           as="h2"
           text={title}
+          baseDelay={0.55}
           className="text-[clamp(30px,5vw,44px)] font-black leading-[1.05] tracking-[-0.04em] text-[var(--fg)]"
         />
-        <SlashRule />
+        <SlashRule delay={1} />
       </div>
     </div>
   );
@@ -363,18 +431,15 @@ export function PageHeader({
       >
         ← Back
       </button>
-      <div className="mb-2 flex items-baseline gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent-1)]">
-        <span className="tracking-[0.02em]">{"//"}</span>
-        <span>{subtitle}</span>
-        {jp && <span className="jp text-[13px] font-medium normal-case tracking-[0.3em] text-[var(--fg-3)]">{jp}</span>}
-      </div>
+      <Eyebrow label={subtitle} jp={jp} className="mb-2" />
       <div className="flex items-center gap-6">
         <LetterReveal
           as="h1"
           text={title}
+          baseDelay={0.55}
           className="text-[clamp(36px,8vw,56px)] font-black leading-[1.05] tracking-display text-[var(--fg)]"
         />
-        <SlashRule />
+        <SlashRule delay={1} />
       </div>
       <p className="mt-4 max-w-[520px] text-[15px] leading-relaxed text-[var(--fg-2)]">
         {description}

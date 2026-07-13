@@ -1,7 +1,7 @@
 "use client";
 
 import { Mail, ExternalLink, Link as LinkIcon } from "lucide-react";
-import { FadeIn, Accent, PlusMark } from "@/components/ui";
+import { FadeIn, Accent, PlusMark, Eyebrow } from "@/components/ui";
 
 const EMAIL = "hello@alexnguyen.dev";
 
@@ -36,12 +36,7 @@ export default function Contact() {
 
       <div className="mx-auto w-full max-w-[1080px] px-0 sm:px-2">
         <FadeIn>
-          <div className="mb-4 flex items-baseline gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-1)]">
-            <span className="tracking-[0.02em]">{"//"}</span>
-            <span className="tabular-nums tracking-[0.08em] text-[var(--fg-3)]">04</span>
-            <span>Contact</span>
-            <span className="jp text-[13px] font-medium normal-case tracking-[0.3em] text-[var(--fg-3)]">連絡</span>
-          </div>
+          <Eyebrow index="04" label="Contact" jp="連絡" className="mb-4" />
 
           <h2 className="mb-[30px] max-w-[14ch] text-[clamp(38px,7.5vw,72px)] font-black leading-[1.02] tracking-[-0.045em] text-[var(--fg)] [text-wrap:balance]">
             Let&apos;s make something <Accent>warm.</Accent>
