@@ -27,7 +27,7 @@ export default function Hero({ profile }: HeroProps) {
   return (
     <section
       id="hero"
-      className="relative flex h-[100svh] min-h-[680px] flex-col justify-center overflow-hidden pb-10 pt-[84px] sm:pb-24"
+      className="relative flex h-[100svh] min-h-[680px] flex-col justify-center overflow-hidden pb-[150px] pt-[84px] sm:pb-24"
     >
       {/* soft radial glow */}
       <div className="pointer-events-none absolute left-1/2 top-[44%] h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,var(--accent-1)_0%,transparent_70%)] opacity-[0.07]" />
@@ -115,10 +115,11 @@ export default function Hero({ profile }: HeroProps) {
         </motion.div>
       </div>
 
-      {/* baseline ticker — hidden on phones where the bottom dock lives */}
+      {/* baseline ticker — on phones it rides above the floating bottom dock
+          (fixed bottom-4, ~56px tall), on larger screens it sits at the base */}
       <div
         aria-hidden
-        className="group absolute bottom-0 left-0 right-0 hidden overflow-hidden border-t border-[var(--border)] py-[15px] [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)] sm:block"
+        className="group absolute bottom-[84px] left-0 right-0 overflow-hidden border-t border-[var(--border)] py-[15px] [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)] sm:bottom-0"
       >
         <div className="animate-ticker flex w-max group-hover:[animation-play-state:paused]">
           {[0, 1].map((lane) => (
