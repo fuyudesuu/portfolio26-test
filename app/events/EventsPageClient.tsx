@@ -47,7 +47,9 @@ export default function EventsPageClient({ events }: { events: EventData[] }) {
         </div>
 
         <div className="relative">
-          <div aria-hidden className="slash-strip absolute left-[18px] top-0 bottom-0 w-1.5 opacity-35" />
+          {/* rail center (11px + 3px) matches the dot center: dots are w-3
+              centered in a w-7 column, so their midline sits at x = 14px */}
+          <div aria-hidden className="slash-strip absolute left-[11px] top-0 bottom-0 w-1.5 opacity-35" />
           <div className="flex flex-col gap-5">
             {filtered.map((ev, i) => {
               const badge = EVENT_BADGE_CONFIG[ev.type];
