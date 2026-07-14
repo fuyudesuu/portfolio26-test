@@ -69,13 +69,14 @@ export default function Hero({ profile }: HeroProps) {
           {profile.eyebrow}
         </motion.p>
 
-        {/* name block framed by HUD corner brackets; the brackets live on the
-            h1 with em offsets so they scale with the clamp()ed display size
-            instead of drifting away at small widths */}
+        {/* name framed by HUD corner brackets. The h1 carries equal em-based
+            padding and the brackets pin to its padding-box corners, so both
+            gaps are symmetric by construction and scale with the clamp()ed
+            size; a matching negative margin keeps the glyphs on the left edge. */}
         <motion.div className="inline-block" {...fadeUp(0.2)}>
-          <h1 className="relative text-[clamp(52px,11vw,104px)] font-black leading-[0.95] tracking-[-0.05em] text-[var(--fg)]">
-            <span aria-hidden className="absolute left-[-0.2em] top-[-0.12em] h-[0.2em] w-[0.2em] border-l-[1.5px] border-t-[1.5px] border-[var(--accent-1)] opacity-85" />
-            <span aria-hidden className="absolute bottom-[-0.02em] right-[-0.34em] h-[0.2em] w-[0.2em] border-b-[1.5px] border-r-[1.5px] border-[var(--fg-3)] opacity-50" />
+          <h1 className="relative -ml-[0.16em] inline-block px-[0.16em] py-[0.13em] text-[clamp(52px,11vw,104px)] font-black leading-[0.95] tracking-[-0.05em] text-[var(--fg)]">
+            <span aria-hidden className="pointer-events-none absolute left-0 top-0 h-[0.2em] w-[0.2em] border-l-[1.5px] border-t-[1.5px] border-[var(--accent-1)] opacity-85" />
+            <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 h-[0.2em] w-[0.2em] border-b-[1.5px] border-r-[1.5px] border-[var(--fg-3)] opacity-50" />
             {first}
             {surname && (
               <>
@@ -99,16 +100,18 @@ export default function Hero({ profile }: HeroProps) {
           {profile.tagline}
         </motion.p>
 
+        {/* matched CTA pair: identical box + min-width, content centered, so
+            the two buttons read as an even set despite different label lengths */}
         <motion.div className="flex flex-wrap gap-3" {...fadeUp(0.55)}>
           <a
             href="#about"
-            className="flex items-center gap-2 rounded-pill border-[1.5px] border-transparent bg-[var(--accent-1)] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(232,148,58,0.3)] outline-none transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(232,148,58,0.4)]"
+            className="flex min-w-[220px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-transparent bg-[var(--accent-1)] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(232,148,58,0.3)] outline-none transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(232,148,58,0.4)]"
           >
             Explore my world <ArrowUpRight size={16} />
           </a>
           <a
             href="#contact"
-            className="flex items-center gap-2 rounded-pill border-[1.5px] border-[var(--border)] bg-transparent px-7 py-3.5 text-sm font-semibold text-[var(--fg)] outline-none transition-all duration-250 hover:-translate-y-0.5 hover:border-[var(--fg-3)]"
+            className="flex min-w-[220px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-[var(--border)] bg-transparent px-7 py-3.5 text-sm font-semibold text-[var(--fg)] outline-none transition-all duration-250 hover:-translate-y-0.5 hover:border-[var(--fg-3)]"
           >
             Get in touch
           </a>

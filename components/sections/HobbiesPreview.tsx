@@ -38,7 +38,7 @@ export default function HobbiesPreview({ hobbies }: { hobbies: HobbyData[] }) {
                     The rounded clip lives on its own compositing layer so the
                     zoomed image can't leak past the radius while tilted. */}
                 <div
-                  className={`group relative cursor-pointer overflow-hidden rounded-card isolate [transform:translateZ(0)] ${
+                  className={`clip-mask group relative cursor-pointer overflow-hidden rounded-card isolate [transform:translateZ(0)] ${
                     offset ? "h-[300px] min-[561px]:mt-11" : "h-[330px]"
                   }`}
                 >

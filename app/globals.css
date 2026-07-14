@@ -106,3 +106,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-ticker, .animate-caret { animation: none; }
 }
+
+/* Forces a rounded-clip element onto its own layer so `overflow:hidden` keeps
+   clipping the corners while a transformed ancestor (the tilt card) animates —
+   WebKit/Blink otherwise flash a square edge mid-transform. */
+.clip-mask {
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
