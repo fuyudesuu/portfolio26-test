@@ -4,6 +4,7 @@ import About from "@/components/sections/About";
 import ResumePreview from "@/components/sections/ResumePreview";
 import LeisuresPreview from "@/components/sections/LeisuresPreview";
 import Contact from "@/components/sections/Contact";
+import Instruments from "@/components/ui/Instruments";
 
 export default function HomePage() {
   const profile = getAboutProfile();
@@ -32,6 +33,7 @@ export default function HomePage() {
 
   return (
     <>
+      <Instruments />
       <Hero profile={profile} />
       <About profile={profile} note={note} />
       <ResumePreview resume={resume} />

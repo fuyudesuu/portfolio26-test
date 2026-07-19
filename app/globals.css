@@ -103,8 +103,23 @@ body {
   animation: caret-blink 0.8s steps(2, start) infinite;
 }
 
+/* Register-square blink (the amber "status LED" chips) */
+@keyframes regblink {
+  0%, 72%, 100% { opacity: 0.9; }
+  76%, 88% { opacity: 0.2; }
+}
+.animate-regblink { animation: regblink 4.2s steps(1, end) infinite; }
+
+/* Marching chevrons (hero scroll cue) */
+@keyframes hero-march {
+  0% { transform: translateY(0) rotate(45deg); opacity: 0.15; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(5px) rotate(45deg); opacity: 0.15; }
+}
+.animate-march { animation: hero-march 1.9s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-ticker, .animate-caret { animation: none; }
+  .animate-ticker, .animate-caret, .animate-regblink, .animate-march { animation: none; }
 }
 
 /* Forces a rounded-clip element onto its own layer so `overflow:hidden` keeps

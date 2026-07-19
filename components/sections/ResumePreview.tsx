@@ -25,7 +25,7 @@ export default function ResumePreview({ resume }: { resume: Resume }) {
       <PlusMark className="right-[22px] top-[22px]" />
 
       <div className="relative mx-auto w-full max-w-[1080px] px-0 sm:px-2">
-        <Kicker index="02" label="Résumé" jp="経歴" title="The road so far" />
+        <Kicker index="02" label="Résumé" jp="経歴" regs={["c", "h"]} title="The road so far" />
 
         {/* career line — horizontal on desktop, vertical rail on mobile */}
         <FadeIn>

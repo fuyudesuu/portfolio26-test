@@ -27,7 +27,7 @@ export default function About({ profile, note }: AboutProps) {
   return (
     <section id="about" className="px-5 pb-[104px] pt-[120px]">
       <div className="mx-auto w-full max-w-[1080px] px-0 sm:px-2">
-        <Kicker index="01" label="About" jp="紹介" title="Who I am" />
+        <Kicker index="01" label="About" jp="紹介" regs={["a", "h"]} title="Who I am" />
 
         {/* big statement typed out, framed by corner brackets; width hugs the
             text so the closing bracket sits on the last line */}

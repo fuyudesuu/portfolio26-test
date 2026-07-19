@@ -32,6 +32,7 @@ export default function Contact() {
           EOF&ensp;{"//"}&ensp;<span className="jp tracking-[0.3em]">おわり</span>
         </b>
         <span className="h-[9px] w-[34px] opacity-55 [background:repeating-linear-gradient(90deg,var(--fg-3)_0_2px,transparent_2px_5px)]" />
+        <span className="h-[5px] w-[5px] bg-[var(--accent-1)]" />
       </div>
 
       <div className="mx-auto w-full max-w-[1080px] px-0 sm:px-2">

@@ -242,7 +242,8 @@ export function Accent({ children }: { children: ReactNode }) {
 }
 
 /* ─── Slash rule ───
-   The "////" divider line. Its pattern crawls with scroll position. */
+   The "////" divider line: an amber lead-in dissolving into the muted strip,
+   one continuous texture whose pattern crawls with scroll position. */
 export function SlashRule({ className = "", delay = 0.55 }: { className?: string; delay?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
@@ -252,7 +253,7 @@ export function SlashRule({ className = "", delay = 0.55 }: { className?: string
     let raf = 0;
     const update = () => {
       raf = 0;
-      if (ref.current) ref.current.style.backgroundPosition = `${(window.scrollY * 0.3).toFixed(1)}px 0`;
+      ref.current?.style.setProperty("--sp", `${(window.scrollY * 0.3).toFixed(1)}px 0`);
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -261,15 +262,42 @@ export function SlashRule({ className = "", delay = 0.55 }: { className?: string
   }, [reduce]);
 
   return (
-    <motion.span
-      ref={ref}
-      aria-hidden
-      className={`slash-strip h-[9px] min-w-[40px] flex-1 ${className}`}
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 0.22 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.7, delay }}
-    />
+    <span ref={ref} aria-hidden className={`relative h-[9px] min-w-[40px] flex-1 ${className}`}>
+      <motion.span
+        className="slash-strip absolute inset-0 [background-position:var(--sp,0_0)]"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 0.22 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay }}
+      />
+      <motion.span
+        className="slash-strip-accent absolute left-0 top-0 h-full w-[72px] [background-position:var(--sp,0_0)] [-webkit-mask-image:linear-gradient(90deg,#000_25%,transparent)] [mask-image:linear-gradient(90deg,#000_25%,transparent)]"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 0.9 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: delay + 0.5 }}
+      />
+    </span>
+  );
+}
+
+/* ─── Register squares ───
+   Tiny "status LED" chips: a = amber (blinking), c = coral, h = hatched,
+   m = muted. The Endfield accent punctuation for eyebrows and labels. */
+export type RegItem = "a" | "c" | "h" | "m";
+export function Regs({ items = ["a", "h"], className = "" }: { items?: RegItem[]; className?: string }) {
+  const cls: Record<RegItem, string> = {
+    a: "bg-[var(--accent-1)] opacity-90 animate-regblink",
+    c: "bg-[var(--accent-2)] opacity-55",
+    h: "opacity-50 [background:repeating-linear-gradient(-45deg,var(--fg-3)_0_1.5px,transparent_1.5px_3.5px)]",
+    m: "bg-[var(--fg-3)] opacity-30",
+  };
+  return (
+    <span aria-hidden className={`inline-flex gap-1 ${className}`}>
+      {items.map((t, i) => (
+        <i key={i} className={`h-[7px] w-[7px] ${cls[t]}`} />
+      ))}
+    </span>
   );
 }
 
@@ -280,11 +308,13 @@ export function Eyebrow({
   index,
   label,
   jp,
+  regs,
   className = "",
 }: {
   index?: string;
   label: string;
   jp?: string;
+  regs?: RegItem[];
   className?: string;
 }) {
   const reduce = useReducedMotion();
@@ -303,6 +333,7 @@ export function Eyebrow({
         {index && <span className={idxCls}>{index}</span>}
         <span>{label}</span>
         {jp && <span className={jpCls}>{jp}</span>}
+        {regs && <Regs items={regs} className="self-center" />}
       </div>
     );
   }
@@ -340,6 +371,16 @@ export function Eyebrow({
           transition={{ duration: 0.2, delay: jpDelay }}
         >
           {jp}
+        </motion.span>
+      )}
+      {regs && (
+        <motion.span
+          className="self-center"
+          initial={{ opacity: 0 }}
+          animate={started ? { opacity: 1 } : {}}
+          transition={{ duration: 0.5, delay: jpDelay + 0.15 }}
+        >
+          <Regs items={regs} />
         </motion.span>
       )}
     </motion.div>
@@ -382,18 +423,20 @@ export function Kicker({
   index,
   label,
   jp,
+  regs,
   title,
   className = "",
 }: {
   index?: string;
   label: string;
   jp?: string;
+  regs?: RegItem[];
   title: string;
   className?: string;
 }) {
   return (
     <div className={`mb-11 ${className}`}>
-      <Eyebrow index={index} label={label} jp={jp} className="mb-2" />
+      <Eyebrow index={index} label={label} jp={jp} regs={regs} className="mb-2" />
       <div className="flex items-center gap-6">
         <LetterReveal
           as="h2"
