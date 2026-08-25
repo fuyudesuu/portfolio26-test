@@ -55,3 +55,76 @@ body {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ─── Design-language utilities ─── */
+
+/* Japanese glyph register — mincho serif for the quiet bilingual labels */
+.jp {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho",
+    "Noto Serif JP", "Noto Serif CJK JP", serif;
+  font-style: normal;
+}
+
+/* Fine "////" slash strip — replaces solid rules and rails */
+.slash-strip {
+  background-image: repeating-linear-gradient(
+    115deg, var(--fg-3) 0 1.5px, transparent 1.5px 7px);
+}
+.slash-strip-accent {
+  background-image: repeating-linear-gradient(
+    115deg, var(--accent-1) 0 1.5px, transparent 1.5px 6px);
+}
+.hazard-strip {
+  background-image: repeating-linear-gradient(
+    115deg, var(--accent-1) 0 4px, transparent 4px 9px);
+}
+
+/* Fine diagonal hatch texture for full-bleed bands (fades out downward) */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg, rgba(196, 90, 60, 0.07) 0 1.5px, transparent 1.5px 14px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 38%);
+  mask-image: linear-gradient(180deg, #000, transparent 38%);
+}
+
+/* Hero ticker marquee */
+@keyframes ticker-scroll {
+  to { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker-scroll 28s linear infinite;
+}
+
+/* Typewriter caret */
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+.animate-caret {
+  animation: caret-blink 0.8s steps(2, start) infinite;
+}
+
+/* Register-square blink (the amber "status LED" chips) */
+@keyframes regblink {
+  0%, 72%, 100% { opacity: 0.9; }
+  76%, 88% { opacity: 0.2; }
+}
+.animate-regblink { animation: regblink 4.2s steps(1, end) infinite; }
+
+/* Marching chevrons (hero scroll cue) */
+@keyframes hero-march {
+  0% { transform: translateY(0) rotate(45deg); opacity: 0.15; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(5px) rotate(45deg); opacity: 0.15; }
+}
+.animate-march { animation: hero-march 1.9s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker, .animate-caret, .animate-regblink, .animate-march { animation: none; }
+}
+
+/* Forces a rounded-clip element onto its own layer so `overflow:hidden` keeps
+   clipping the corners while a transformed ancestor (the tilt card) animates —
+   WebKit/Blink otherwise flash a square edge mid-transform. */
+.clip-mask {
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
