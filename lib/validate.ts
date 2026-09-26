@@ -51,9 +51,13 @@ export function sanitizeCommitMessage(s: unknown): string {
 export function isSafeImageValue(v: unknown): boolean {
   if (v === undefined || v === null || v === "") return true;
   if (typeof v !== "string") return false;
+  // Browsers strip tabs/newlines from URLs ("/\t/evil.com" → "//evil.com"), and
+  // treat "\" like "/", so reject whitespace, control chars and backslashes outright
+  // eslint-disable-next-line no-control-regex
+  if (/[\s\x00-\x1f\x7f\\]/.test(v)) return false;
   if (v.startsWith("/")) {
-    // "//host" and "/\host" are both treated as protocol-relative by browsers
-    return !v.startsWith("//") && !v.startsWith("/\\");
+    // "//host" is protocol-relative
+    return !v.startsWith("//");
   }
   try {
     return new URL(v).protocol === "https:";
@@ -67,10 +71,8 @@ export function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
 
-  const forwarded = request.headers.get("x-forwarded-host");
-  const host = (forwarded ? forwarded.split(",")[0] : request.headers.get("host"))
-    ?.trim()
-    .toLowerCase();
+  // Host only: x-forwarded-host is client-controlled unless a proxy rewrites it
+  const host = request.headers.get("host")?.trim().toLowerCase();
   if (!host) return false;
 
   try {
@@ -144,6 +146,16 @@ export async function readJsonBody(
     return { error: jsonError("Invalid request body", 400) };
   }
   return { body: parsed as Record<string, unknown> };
+}
+
+/** Absent/null, or an array of strings (tags, skills) */
+export function isOptionalStringArray(v: unknown): boolean {
+  return v === undefined || v === null || (Array.isArray(v) && v.every((x) => typeof x === "string"));
+}
+
+/** Absent/null, or one of the three accent slots */
+export function isOptionalAccentIndex(v: unknown): boolean {
+  return v === undefined || v === null || v === 1 || v === 2 || v === 3;
 }
 
 /** True when every listed field is absent/null or a string */

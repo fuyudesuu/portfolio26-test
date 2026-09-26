@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createSessionToken, setSessionCookie } from "@/lib/session";
+import { readJsonBody } from "@/lib/validate";
 
 const MAX_FIELD_LENGTH = 200;
 
@@ -11,8 +12,11 @@ const WINDOW_MS = 15 * 60 * 1000;
 const MAX_TRACKED_IPS = 10_000;
 const failedAttempts = new Map<string, { count: number; resetAt: number }>();
 
+// Rightmost x-forwarded-for entry: appended by the nearest proxy (Vercel
+// overwrites the header; `next start` fills it from the socket), so a client
+// can't rotate it the way it can the leftmost entry.
 function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim();
   return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
 }
 
@@ -35,7 +39,8 @@ function retryAfterSeconds(ip: string, now: number): number {
   return Math.ceil((entry.resetAt - now) / 1000);
 }
 
-function recordFailure(ip: string, now: number) {
+/** Count an attempt up front; cleared again on success */
+function recordAttempt(ip: string, now: number) {
   pruneExpired(now);
   const entry = failedAttempts.get(ip);
   if (entry && entry.resetAt > now) {
@@ -62,15 +67,14 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: { "Retry-After": String(retryAfter) } }
       );
     }
+    // Count now, synchronously with the check (no await in between), so a
+    // concurrent burst can't all pass it before any failure is recorded
+    recordAttempt(ip, now);
 
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-    }
+    const parsed = await readJsonBody(request);
+    if ("error" in parsed) return parsed.error;
 
-    const { username, password } = (body ?? {}) as Record<string, unknown>;
+    const { username, password } = parsed.body;
     if (
       typeof username !== "string" ||
       typeof password !== "string" ||
@@ -89,9 +93,10 @@ export async function POST(request: NextRequest) {
     const adminUsername = process.env.ADMIN_USERNAME;
     const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
 
-    if (!adminUsername || !adminPasswordHash || !process.env.SESSION_SECRET) {
+    const sessionSecret = process.env.SESSION_SECRET;
+    if (!adminUsername || !adminPasswordHash || !sessionSecret || sessionSecret.length < 32) {
       console.error(
-        "[login] Missing ADMIN_USERNAME, ADMIN_PASSWORD_HASH or SESSION_SECRET"
+        "[login] Missing ADMIN_USERNAME or ADMIN_PASSWORD_HASH, or SESSION_SECRET missing/short"
       );
       return internalError();
     }
@@ -102,7 +107,6 @@ export async function POST(request: NextRequest) {
     const passwordValid = await bcrypt.compare(password, adminPasswordHash);
 
     if (!usernameValid || !passwordValid) {
-      recordFailure(ip, now);
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }

@@ -4,6 +4,7 @@ import {
   guard,
   readJsonBody,
   hasOptionalStrings,
+  isOptionalStringArray,
   isSafeImageValue,
   isValidSlug,
   sanitizeCommitMessage,
@@ -61,7 +62,7 @@ export async function PUT(
   if ("error" in parsed) return parsed.error;
   const body = parsed.body;
 
-  if (!hasOptionalStrings(body, ["title", "date", "location", "type", "summary", "content", "image"])) {
+  if (!hasOptionalStrings(body, ["title", "date", "location", "type", "summary", "content", "image"]) || !isOptionalStringArray(body.tags)) {
     return jsonError("Invalid request body", 400);
   }
   if (!isSafeImageValue(body.image)) {
