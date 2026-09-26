@@ -6,6 +6,12 @@
  */
 
 import matter from "gray-matter";
+import {
+  assertContentDir,
+  assertContentPath,
+  isValidSlug,
+  sanitizeCommitMessage,
+} from "@/lib/validate";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -27,6 +33,13 @@ function headers(token: string) {
   };
 }
 
+/** Log the upstream response body server-side only; the thrown error carries just the status */
+async function upstreamError(action: string, res: Response): Promise<Error> {
+  const detail = await res.text().catch(() => "");
+  console.error(`GitHub ${action} failed: ${res.status}`, detail.slice(0, 1000));
+  return new Error(`GitHub ${action} failed: ${res.status}`);
+}
+
 export type ContentFile = {
   slug: string;
   frontmatter: Record<string, unknown>;
@@ -36,20 +49,25 @@ export type ContentFile = {
 
 /** List all markdown files in a content directory (e.g. "content/events") */
 export async function listFiles(dir: string): Promise<ContentFile[]> {
+  assertContentDir(dir);
   const { token, repo, branch } = getConfig();
   const url = `${GITHUB_API}/repos/${repo}/contents/${dir}?ref=${branch}`;
 
   const res = await fetch(url, { headers: headers(token), cache: "no-store" });
   if (res.status === 404) return [];
-  if (!res.ok) throw new Error(`GitHub list failed: ${res.status}`);
+  if (!res.ok) throw await upstreamError("list", res);
 
   const items = (await res.json()) as Array<{ name: string; type: string }>;
   const mdFiles = items.filter((i) => i.type === "file" && i.name.endsWith(".md"));
 
   const results: ContentFile[] = [];
   for (const file of mdFiles) {
-    const slug = file.name.replace(".md", "");
-    const content = await readFile(`${dir}/${file.name}`);
+    const slug = file.name.replace(/\.md$/, "");
+    if (!isValidSlug(slug)) {
+      console.warn(`Skipping content file with invalid name: ${dir}/${file.name}`);
+      continue;
+    }
+    const content = await readFile(`${dir}/${slug}.md`);
     if (content) results.push({ ...content, slug });
   }
   return results;
@@ -57,12 +75,13 @@ export async function listFiles(dir: string): Promise<ContentFile[]> {
 
 /** Read a single file's content and parse frontmatter */
 export async function readFile(path: string): Promise<ContentFile | null> {
+  assertContentPath(path);
   const { token, repo, branch } = getConfig();
   const url = `${GITHUB_API}/repos/${repo}/contents/${path}?ref=${branch}`;
 
   const res = await fetch(url, { headers: headers(token), cache: "no-store" });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub read failed: ${res.status}`);
+  if (!res.ok) throw await upstreamError("read", res);
 
   const data = (await res.json()) as { content: string; sha: string };
   const decoded = Buffer.from(data.content, "base64").toString("utf-8");
@@ -85,6 +104,7 @@ export async function writeFile(
   commitMessage: string,
   sha?: string
 ): Promise<void> {
+  assertContentPath(path);
   const { token, repo, branch } = getConfig();
   const url = `${GITHUB_API}/repos/${repo}/contents/${path}`;
 
@@ -92,7 +112,7 @@ export async function writeFile(
   const encoded = Buffer.from(markdown, "utf-8").toString("base64");
 
   const payload: Record<string, unknown> = {
-    message: commitMessage,
+    message: sanitizeCommitMessage(commitMessage),
     content: encoded,
     branch,
   };
@@ -104,10 +124,7 @@ export async function writeFile(
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`GitHub write failed: ${res.status} ${err}`);
-  }
+  if (!res.ok) throw await upstreamError("write", res);
 }
 
 /** Delete a markdown file (commits the deletion) */
@@ -116,27 +133,27 @@ export async function deleteFile(
   commitMessage: string,
   sha: string
 ): Promise<void> {
+  assertContentPath(path);
   const { token, repo, branch } = getConfig();
   const url = `${GITHUB_API}/repos/${repo}/contents/${path}`;
 
   const res = await fetch(url, {
     method: "DELETE",
     headers: headers(token),
-    body: JSON.stringify({ message: commitMessage, sha, branch }),
+    body: JSON.stringify({ message: sanitizeCommitMessage(commitMessage), sha, branch }),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`GitHub delete failed: ${res.status} ${err}`);
-  }
+  if (!res.ok) throw await upstreamError("delete", res);
 }
 
-/** Convert a title into a URL-safe slug */
+/** Convert a title into a URL-safe slug (callers still check it with isValidSlug) */
 export function slugify(title: string): string {
   return title
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/-+/g, "-")
+    .slice(0, 80)
+    .replace(/^-+|-+$/g, "");
 }
