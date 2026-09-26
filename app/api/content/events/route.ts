@@ -26,7 +26,13 @@ export async function GET(request: NextRequest) {
     const events = files.map((f) => ({
       slug: f.slug,
       title: f.frontmatter.title || "",
-      date: f.frontmatter.date ? String(f.frontmatter.date).split("T")[0] : "",
+      // YAML parses unquoted dates into Date objects; String(Date) splits on the
+      // "T" in "GMT", so normalize both shapes to ISO yyyy-mm-dd (as lib/content.ts)
+      date: f.frontmatter.date
+        ? f.frontmatter.date instanceof Date
+          ? f.frontmatter.date.toISOString().split("T")[0]
+          : String(f.frontmatter.date).split("T")[0]
+        : "",
       location: f.frontmatter.location || "",
       type: f.frontmatter.type || "attendee",
       tags: f.frontmatter.tags || [],
