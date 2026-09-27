@@ -1,16 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
 import { readFile, writeFile, deleteFile } from "@/lib/github";
+import {
+  guard,
+  readJsonBody,
+  hasOptionalStrings,
+  isOptionalAccentIndex,
+  isSafeImageValue,
+  isValidSlug,
+  sanitizeCommitMessage,
+  jsonError,
+  internalError,
+} from "@/lib/validate";
+
+export const dynamic = "force-dynamic";
 
 const DIR = "content/hobbies";
 
 /** GET — read a single hobby */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const denied = await guard(request);
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
+  }
+
   try {
-    const { slug } = await params;
     const file = await readFile(`${DIR}/${slug}.md`);
     if (!file) {
       return NextResponse.json({ error: "Hobby not found" }, { status: 404 });
@@ -22,10 +41,7 @@ export async function GET(
       sha: file.sha,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to read hobby" },
-      { status: 500 }
-    );
+    return internalError("Failed to read hobby", err);
   }
 }
 
@@ -34,22 +50,34 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(request, { write: true });
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
   }
 
+  const parsed = await readJsonBody(request);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body;
+
+  if (!hasOptionalStrings(body, ["title", "icon", "summary", "content", "image"]) || !isOptionalAccentIndex(body.accentIndex)) {
+    return jsonError("Invalid request body", 400);
+  }
+  if (!isSafeImageValue(body.image)) {
+    return jsonError("Invalid image URL", 400);
+  }
+  const { title, icon, accentIndex, summary, image } = body;
+  const content = body.content as string | null | undefined;
+
   try {
-    const { slug } = await params;
     const path = `${DIR}/${slug}.md`;
 
     const existing = await readFile(path);
     if (!existing) {
       return NextResponse.json({ error: "Hobby not found" }, { status: 404 });
     }
-
-    const body = await request.json();
-    const { title, icon, accentIndex, summary, content, image } = body;
 
     const frontmatter = {
       title: title ?? existing.frontmatter.title,
@@ -63,31 +91,30 @@ export async function PUT(
       path,
       frontmatter,
       content ?? existing.body,
-      `Update hobby: ${frontmatter.title}`,
+      sanitizeCommitMessage(`Update hobby: ${frontmatter.title}`),
       existing.sha
     );
 
     return NextResponse.json({ success: true, slug });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to update hobby" },
-      { status: 500 }
-    );
+    return internalError("Failed to update hobby", err);
   }
 }
 
 /** DELETE — remove a hobby */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(request, { write: true });
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
   }
 
   try {
-    const { slug } = await params;
     const path = `${DIR}/${slug}.md`;
 
     const existing = await readFile(path);
@@ -95,13 +122,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Hobby not found" }, { status: 404 });
     }
 
-    await deleteFile(path, `Delete hobby: ${slug}`, existing.sha);
+    await deleteFile(path, sanitizeCommitMessage(`Delete hobby: ${slug}`), existing.sha);
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to delete hobby" },
-      { status: 500 }
-    );
+    return internalError("Failed to delete hobby", err);
   }
 }

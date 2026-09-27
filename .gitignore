@@ -3,3 +3,11 @@
 /tsconfig.tsbuildinfo
 npm-debug.log*
 .DS_Store
+
+# env files
+.env
+.env.local
+.env*.local
+
+# static export output
+/out

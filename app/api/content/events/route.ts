@@ -1,17 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
 import { listFiles, writeFile, readFile, slugify } from "@/lib/github";
+import {
+  guard,
+  readJsonBody,
+  hasOptionalStrings,
+  isOptionalStringArray,
+  isSafeImageValue,
+  isValidSlug,
+  sanitizeCommitMessage,
+  jsonError,
+  internalError,
+} from "@/lib/validate";
+
+export const dynamic = "force-dynamic";
 
 const DIR = "content/events";
 
 /** GET — list all events */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = await guard(request);
+  if (denied) return denied;
+
   try {
     const files = await listFiles(DIR);
     const events = files.map((f) => ({
       slug: f.slug,
       title: f.frontmatter.title || "",
-      date: f.frontmatter.date ? String(f.frontmatter.date).split("T")[0] : "",
+      // YAML parses unquoted dates into Date objects; String(Date) splits on the
+      // "T" in "GMT", so normalize both shapes to ISO yyyy-mm-dd (as lib/content.ts)
+      date: f.frontmatter.date
+        ? f.frontmatter.date instanceof Date
+          ? f.frontmatter.date.toISOString().split("T")[0]
+          : String(f.frontmatter.date).split("T")[0]
+        : "",
       location: f.frontmatter.location || "",
       type: f.frontmatter.type || "attendee",
       tags: f.frontmatter.tags || [],
@@ -22,34 +43,44 @@ export async function GET() {
     events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return NextResponse.json({ events });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to list events" },
-      { status: 500 }
-    );
+    return internalError("Failed to list events", err);
   }
 }
 
 /** POST — create a new event */
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(request, { write: true });
+  if (denied) return denied;
+
+  const parsed = await readJsonBody(request);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body;
+
+  if (!hasOptionalStrings(body, ["title", "date", "location", "type", "summary", "content", "image"]) || !isOptionalStringArray(body.tags)) {
+    return jsonError("Invalid request body", 400);
+  }
+  const { location, type, tags, summary, image } = body;
+  const title = body.title as string | null | undefined;
+  const date = body.date as string | null | undefined;
+  const content = body.content as string | null | undefined;
+
+  if (!title || !date) {
+    return NextResponse.json(
+      { error: "Title and date are required" },
+      { status: 400 }
+    );
+  }
+  if (!isSafeImageValue(image)) {
+    return jsonError("Invalid image URL", 400);
   }
 
+  const slug = slugify(title);
+  if (!isValidSlug(slug)) {
+    return jsonError("Title must contain at least one letter or number", 400);
+  }
+  const path = `${DIR}/${slug}.md`;
+
   try {
-    const body = await request.json();
-    const { title, date, location, type, tags, summary, content, image } = body;
-
-    if (!title || !date) {
-      return NextResponse.json(
-        { error: "Title and date are required" },
-        { status: 400 }
-      );
-    }
-
-    const slug = slugify(title);
-    const path = `${DIR}/${slug}.md`;
-
     // Prevent overwriting an existing event
     const existing = await readFile(path);
     if (existing) {
@@ -69,13 +100,10 @@ export async function POST(request: NextRequest) {
       image: image || "",
     };
 
-    await writeFile(path, frontmatter, content || "", `Add event: ${title}`);
+    await writeFile(path, frontmatter, content || "", sanitizeCommitMessage(`Add event: ${title}`));
 
     return NextResponse.json({ success: true, slug });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to create event" },
-      { status: 500 }
-    );
+    return internalError("Failed to create event", err);
   }
 }

@@ -1,16 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
 import { readFile, writeFile, deleteFile } from "@/lib/github";
+import {
+  guard,
+  readJsonBody,
+  hasOptionalStrings,
+  isOptionalStringArray,
+  isSafeImageValue,
+  isValidSlug,
+  sanitizeCommitMessage,
+  jsonError,
+  internalError,
+} from "@/lib/validate";
+
+export const dynamic = "force-dynamic";
 
 const DIR = "content/events";
 
 /** GET — read a single event */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const denied = await guard(request);
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
+  }
+
   try {
-    const { slug } = await params;
     const file = await readFile(`${DIR}/${slug}.md`);
     if (!file) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
@@ -22,10 +41,7 @@ export async function GET(
       sha: file.sha,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to read event" },
-      { status: 500 }
-    );
+    return internalError("Failed to read event", err);
   }
 }
 
@@ -34,22 +50,34 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(request, { write: true });
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
   }
 
+  const parsed = await readJsonBody(request);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body;
+
+  if (!hasOptionalStrings(body, ["title", "date", "location", "type", "summary", "content", "image"]) || !isOptionalStringArray(body.tags)) {
+    return jsonError("Invalid request body", 400);
+  }
+  if (!isSafeImageValue(body.image)) {
+    return jsonError("Invalid image URL", 400);
+  }
+  const { title, date, location, type, tags, summary, image } = body;
+  const content = body.content as string | null | undefined;
+
   try {
-    const { slug } = await params;
     const path = `${DIR}/${slug}.md`;
 
     const existing = await readFile(path);
     if (!existing) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
-
-    const body = await request.json();
-    const { title, date, location, type, tags, summary, content, image } = body;
 
     const frontmatter = {
       title: title ?? existing.frontmatter.title,
@@ -65,31 +93,30 @@ export async function PUT(
       path,
       frontmatter,
       content ?? existing.body,
-      `Update event: ${frontmatter.title}`,
+      sanitizeCommitMessage(`Update event: ${frontmatter.title}`),
       existing.sha
     );
 
     return NextResponse.json({ success: true, slug });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to update event" },
-      { status: 500 }
-    );
+    return internalError("Failed to update event", err);
   }
 }
 
 /** DELETE — remove an event */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(request, { write: true });
+  if (denied) return denied;
+
+  const { slug } = await params;
+  if (!isValidSlug(slug)) {
+    return jsonError("Invalid slug", 400);
   }
 
   try {
-    const { slug } = await params;
     const path = `${DIR}/${slug}.md`;
 
     const existing = await readFile(path);
@@ -97,13 +124,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    await deleteFile(path, `Delete event: ${slug}`, existing.sha);
+    await deleteFile(path, sanitizeCommitMessage(`Delete event: ${slug}`), existing.sha);
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to delete event" },
-      { status: 500 }
-    );
+    return internalError("Failed to delete event", err);
   }
 }
